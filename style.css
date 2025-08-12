@@ -423,11 +423,13 @@ h1, h2, h3, h4, h5, h6 {
   .info-row {
     flex-direction: column;
     gap: 1.5rem;
+    align-items: center;
+    text-align: center;
   }
   
   .info-item:nth-child(2) {
-    text-align: left;
-    align-items: flex-start;
+    text-align: center;
+    align-items: center;
   }
   
   .footer-right {
@@ -473,11 +475,13 @@ h1, h2, h3, h4, h5, h6 {
   
   .info-row {
     gap: 1rem;
+    align-items: center;
+    text-align: center;
   }
   
   .info-item:nth-child(2) {
-    text-align: left;
-    align-items: flex-start;
+    text-align: center;
+    align-items: center;
   }
   
   .footer-right {
@@ -690,12 +694,14 @@ foreignObject {
   .info-row {
     flex-direction: row;
     align-items: flex-start;
-    justify-content: space-between;
-    gap: 12px;
+    justify-content: center;
+    gap: 20px;
+    text-align: center;
   }
   .info-item {
     flex: 1 1 50%;
     min-width: 0;
+    text-align: center;
   }
   /* Center CTA on mobile widths */
   .cta-link {
