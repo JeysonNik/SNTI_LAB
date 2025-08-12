@@ -538,6 +538,12 @@ svg g.blob:not(.hovered) {
   filter: none;
 }
 
+/* On small screens, keep background category videos and blobs fully opaque */
+@media (max-width: 600px) {
+  .cat-video-fo { opacity: 1 !important; }
+  svg g.blob { opacity: 1 !important; }
+}
+
 path {
   transition: all 0.2s cubic-bezier(0.1, 0, 0.1, 0.2);
   vector-effect: non-scaling-stroke;

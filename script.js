@@ -2,11 +2,10 @@
   const svg = document.getElementById('svgRoot');
   const container = document.getElementById('container');
   let W = container.clientWidth, H = container.clientHeight;
-  // Environment detection for performance tuning
-  const IS_COARSE = window.matchMedia('(pointer: coarse)').matches;
-  const IS_SMALL_VP = Math.min(window.innerWidth, window.innerHeight) <= 800;
-  const IS_MOBILE = IS_COARSE || IS_SMALL_VP;
-  const PREFERS_REDUCED_MOTION = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+  // Helper: detect small-screen phones
+  function isMobile(){
+    return window.matchMedia && window.matchMedia('(max-width: 600px)').matches;
+  }
   window.addEventListener('resize', () => {
     W = container.clientWidth; H = container.clientHeight; svg.setAttribute('viewBox', `0 0 ${W} ${H}`);
     for(const kv of Object.values(categoryVideos)){
@@ -118,7 +117,7 @@
 
   // BLOB_COUNT: количество блопов (чем больше — тем выше нагрузка на вычисления Voronoi и рендер).
   // Уменьшайте для тестирования на слабых машинах.
-  const BLOB_COUNT = IS_MOBILE ? 9 : 15;
+  const BLOB_COUNT = 15;
 
   // MIN_R / MAX_R: диапазон радиусов блопа при создании (в пикселях, зависят от размеров контейнера).
   // Значение влияет на плотность рассадки и на итоговые размеры ячеек в диаграмме.
@@ -126,25 +125,25 @@
   const MAX_R = Math.min(W, H) * 0.12; // максимальный радиус блопа
 
   // INSET_GAP: внутренний отступ (в пикселях) при усечении контуров — контролирует зазор между соседними блопами.
-  const INSET_GAP = IS_MOBILE ? 6 : 8;
+  const INSET_GAP = 8;
 
   // CHAIKIN_ITERS: количество итераций сглаживания (Чайкин). Больше итераций -> более плавный, но более дорогой по CPU контур.
-  const CHAIKIN_ITERS = IS_MOBILE ? 6 : 10; // меньше итераций на мобильных
+  const CHAIKIN_ITERS = 10; // увеличьте, например, с 8 до 10
 
   // RESAMPLE_POINTS / RESAMPLE_FINAL: размеры выборки точек для промежуточной ресемплизации.
   // RESAMPLE_POINTS влияет на качество промежуточного сглаживания, RESAMPLE_FINAL — на детализацию итогового path.
   // Уменьшение этих чисел ускорит работу, но сделает контур менее плавным.
-  const RESAMPLE_POINTS = IS_MOBILE ? 128 : 192; // меньше на мобильных
-  const RESAMPLE_FINAL = IS_MOBILE ? 220 : 320;  // меньше на мобильных
+  const RESAMPLE_POINTS = 192; // увеличьте, например, с 128 до 192
+  const RESAMPLE_FINAL = 320;  // увеличьте, например, с 256 до 320
 
   // VIDEO_PADDING: дополнительный отступ вокруг вычисленной области для видео внутри блопа.
   // Влияет на масштаб и кроп видео внутри клетки.
-  const VIDEO_PADDING = IS_MOBILE ? 10 : 14;
+  const VIDEO_PADDING = 14;
 
   // DEFAULT_IDLE_AMPLITUDE: базовая амплитуда «шевеления» блопов в режиме overview.
   // IDLE_AMPLITUDE — текущее значение, которое скрипт может менять во время фильтрации.
   // Увеличение -> более заметное плавание; уменьшение -> более статичная сцена.
-  const DEFAULT_IDLE_AMPLITUDE = IS_MOBILE ? 0.012 : 0.02;
+  const DEFAULT_IDLE_AMPLITUDE = 0.02;
   let IDLE_AMPLITUDE = DEFAULT_IDLE_AMPLITUDE;
 
   // CENTER_GAP: минимальный суммарный отступ/защитная дистанция при разрешении пересечений центров.
@@ -153,15 +152,15 @@
 
   // RECOMPUTE_INTERVAL: минимальный интервал (ms) между пересчётами Voronoi/рендером — влияет на производительность.
   // Увеличьте, если хотите снизить нагрузку CPU, но учтите ухудшение плавности анимаций.
-  let RECOMPUTE_INTERVAL = IS_MOBILE ? 12 : 5; // реже пересчёт на мобильных
+  const RECOMPUTE_INTERVAL = 5; // уменьшить с 10 до 5 для более частого обновления
 
   // DISPLAY_LERP: коэффициент сглаживания движения отображаемых позиций (dispX/dispY).
   // Меньше значение -> более плавное, но более медленное следование цели; больше -> более резкое движение.
-  let DISPLAY_LERP = IS_MOBILE ? 0.12 : 0.1;     // smoothing of displayed centers
+  let DISPLAY_LERP = 0.1;     // smoothing of displayed centers
 
   // MORPH_DURATION: стандартная длительность морфинга path'ов (ms). При фильтрации временно увеличивается.
   // Увеличение сделает переходы более медленными/кинетичными; уменьшение — более snappy.
-  let MORPH_DURATION = IS_MOBILE ? 600 : 900;    // увеличьте, например, с 900 до 1400
+  let MORPH_DURATION = 900;    // увеличьте, например, с 900 до 1400
 
   // pending timeouts used to prevent racing transitions
   let _pendingTimeouts = [];
@@ -244,9 +243,8 @@
     backgroundBlur.setAttribute('height','200%');
     
     const blur = document.createElementNS('http://www.w3.org/2000/svg','feGaussianBlur');
-  blur.setAttribute('in','SourceGraphic');
-  // Мобильные устройства хуже переносят фильтры — уменьшаем блюр
-  blur.setAttribute('stdDeviation', IS_MOBILE ? '0' : '3.5');
+    blur.setAttribute('in','SourceGraphic');
+    blur.setAttribute('stdDeviation','3.5'); // увеличиваем блюр для заднего фона
     blur.setAttribute('result','blurred');
     backgroundBlur.appendChild(blur);
     
@@ -277,9 +275,10 @@
     const clip = document.createElementNS('http://www.w3.org/2000/svg','clipPath'); clip.setAttribute('id', 'v-clip-'+b.id); clip.setAttribute('clipPathUnits','userSpaceOnUse');
     const path = document.createElementNS('http://www.w3.org/2000/svg','path'); path.setAttribute('d',''); clip.appendChild(path); defs.appendChild(clip);
 
-    const group = document.createElementNS('http://www.w3.org/2000/svg','g');
-    group.style.transition='opacity 200ms ease, transform 180ms ease';
-    group.style.opacity='0.5';
+  const group = document.createElementNS('http://www.w3.org/2000/svg','g');
+  group.style.transition='opacity 200ms ease, transform 180ms ease';
+  // On mobile, keep blobs fully opaque
+  group.style.opacity = isMobile() ? '1' : '0.5';
     group.style.transformOrigin = '50% 50%';
     group.style.transform = 'scale(1)';
     // NEW: убираем блюр с блопов
@@ -325,12 +324,13 @@
     //  - fill: цвет текста
     //  - opacity: по умолчанию 0 — появляется при hover
     //  - filter drop-shadow: даёт глубину и читабельность поверх видео
-    const label = document.createElementNS('http://www.w3.org/2000/svg','text');
+  const label = document.createElementNS('http://www.w3.org/2000/svg','text');
     label.classList.add('label'); // чтобы сработал CSS transition на opacity
     label.setAttribute('text-anchor','middle');
     label.setAttribute('dominant-baseline','middle');
     label.setAttribute('fill','#fff');
-    label.setAttribute('opacity','0');
+  // Always show labels on mobile devices
+  label.setAttribute('opacity', isMobile() ? '1' : '0');
     label.style.filter='drop-shadow(0 6px 18px rgba(0,0,0,0.6))';
     // показываем реальное имя проекта, если есть
     label.textContent = (b.data && b.data.title) ? b.data.title : `Project ${b.id+1}`;
@@ -499,14 +499,16 @@
         b.label.setAttribute('x', c[0]); 
         b.label.setAttribute('y', c[1]); 
       }
-      const fontSize = Math.max(6, Math.round(b.r * 0.2)); // уменьшаем базовый размер шрифта
-      b.label.setAttribute('font-size', fontSize + 'px');
-      group.style.opacity = b.isHovered ? '1' : '0.5'; b.label.setAttribute('opacity', b.isHovered ? '1' : '0'); // плавность обеспечит CSS transition
+  const fontSize = Math.max(6, Math.round(b.r * 0.2)); // уменьшаем базовый размер шрифта
+  b.label.setAttribute('font-size', fontSize + 'px');
+  // On mobile, blobs and labels stay fully visible regardless of hover state
+  group.style.opacity = isMobile() ? '1' : (b.isHovered ? '1' : '0.5');
+  b.label.setAttribute('opacity', isMobile() ? '1' : (b.isHovered ? '1' : '0')); // плавность обеспечит CSS transition
       // NEW: управляем блюром заднего фона через глобальную переменную
       if (b.isHovered) {
         b.group.classList.add('hovered');
-        // убираем блюр с самого блопа, применяем свечение (кроме мобильных/уменьшенного движения)
-        b.group.style.filter = (IS_MOBILE || PREFERS_REDUCED_MOTION) ? 'none' : 'url(#blob-glow)';
+        // убираем блюр с самого блопа, применяем свечение
+        b.group.style.filter = 'url(#blob-glow)';
       } else {
         b.group.classList.remove('hovered');
         // убираем фильтр с блопа
@@ -528,7 +530,7 @@
   }
 
   // Добавляем специальную длительность для hover-анимации
-  const HOVER_MORPH_DURATION = IS_MOBILE ? 220 : 300; // немного быстрее на мобильных
+  const HOVER_MORPH_DURATION = 300; // немного уменьшить длительность для более отзывчивой анимации
 
   function enterOverviewMode(){
     mode = 'overview';
@@ -562,12 +564,7 @@
   function updateBackgroundBlur() {
     const brandBg = document.getElementById('brandBg');
     if (!brandBg) return;
-    // На мобильных и при reduce-motion — отключаем тяжёлый фильтр
-    if (IS_MOBILE || PREFERS_REDUCED_MOTION) {
-      brandBg.style.filter = 'none';
-      brandBg.style.transition = 'filter 200ms ease';
-      return;
-    }
+    
     // если есть активный hovered блоп - убираем блюр, иначе применяем
     if (hovered && hovered.isHovered) {
       brandBg.style.filter = 'none';
@@ -803,9 +800,7 @@
       b.frozenFO = null; b.frozenLabel = null; b.isFrozen = false; recomputeAndRender(false); } dragging = null; });
 
   let last = performance.now(); let running = true; let frameCount = 0;
-  const RECOMPUTE_EVERY = IS_MOBILE ? 3 : 2; // реже пересчёт на мобильных
-  const VIDEO_TRANSFORM_EVERY = IS_MOBILE ? 2 : 1; // реже апдейт трансформа видео
-  function loop(now){ const dt = now - last; last = now; if(running){ physicsStep(); updateDisplayPositions(); if(frameCount % RECOMPUTE_EVERY === 0) recomputeAndRender(false); if(frameCount % VIDEO_TRANSFORM_EVERY === 0) updateVideoTransforms(); } frameCount++; requestAnimationFrame(loop); }
+  function loop(now){ const dt = now - last; last = now; if(running){ physicsStep(); updateDisplayPositions(); if(frameCount % 2 === 0) recomputeAndRender(false); updateVideoTransforms(); } frameCount++; requestAnimationFrame(loop); }
   requestAnimationFrame(loop);
 
   (function(){ const btn = document.getElementById('resetBtn'); if(btn){ btn.addEventListener('click', ()=>{ for(const b of blobs){ b.x = Math.random()*(W*0.8)+W*0.1; b.y = Math.random()*(H*0.5)+H*0.1; b.vx=b.vy=0; b.isHovered=false; b.isFrozen=false; b.targetX=b.x; b.targetY=b.y; b.dispX=b.x; b.dispY=b.y; b.frozenFO=null; b.frozenLabel=null; if(b.frozenVideoTransform !== undefined){ const v = b.fo.querySelector('video'); if(v) v.style.transition = ''; delete b.frozenVideoTransform; } b.visible=true; b.gridMode=false; } recomputeAndRender(true); }); } })();
@@ -859,7 +854,7 @@
     const hideMs = 300;
     const birthMs = 520;
 
-    if(!key || key === 'all'){
+  if(!key || key === 'all'){
       // reset to overview
       running = true;
       allowDragging = true;
@@ -870,7 +865,8 @@
         b.visible = true;
         b.group.style.display = '';
         b.group.style.transition = `opacity ${hideMs}ms ease`;
-        b.group.style.opacity = '0.5';
+        // Keep opaque on mobile, semi-transparent otherwise
+        b.group.style.opacity = isMobile() ? '1' : '0.5';
         b.isFrozen = false;
         b.frozenPath = null;
         b.frozenVideoTransform = null;
@@ -942,9 +938,9 @@
       const info = infos[b.id];
       if(info && info.path){
         const centerTiny = circlePathStr(W/2, H/2, 2, 16);
-        try{ morphPath(b.clipPathEl, info.path, birthMs); morphPath(b.pathEl, info.path, birthMs); }catch(e){}
-        b.group.style.transition = `transform ${birthMs}ms cubic-bezier(.2,.9,.2,1), opacity ${birthMs}ms ease`;
-        const tid2 = setTimeout(()=>{ b.group.style.transform = 'scale(1)'; b.group.style.opacity = '0.95'; }, 10);
+  try{ morphPath(b.clipPathEl, info.path, birthMs); morphPath(b.pathEl, info.path, birthMs); }catch(e){}
+  b.group.style.transition = `transform ${birthMs}ms cubic-bezier(.2,.9,.2,1), opacity ${birthMs}ms ease`;
+  const tid2 = setTimeout(()=>{ b.group.style.transform = 'scale(1)'; b.group.style.opacity = isMobile() ? '1' : '0.95'; }, 10);
         _pendingTimeouts.push(tid2);
       }
     }
@@ -963,36 +959,6 @@
   recomputeAndRender(true);
   enterOverviewMode();
   updateBackgroundBlur(); // применяем начальный блюр
-  
-  // Global lifecycle/perf handlers
-  // Pause simulation when page is hidden; resume when visible (unless reduce-motion)
-  document.addEventListener('visibilitychange', () => {
-    if (document.hidden) {
-      running = false;
-      try { for (const cat of categories){ const kv = categoryVideos[cat.id]; kv.vid.pause && kv.vid.pause(); } } catch(_){}
-    } else {
-      running = !PREFERS_REDUCED_MOTION;
-      try { for (const cat of categories){ const kv = categoryVideos[cat.id]; if(kv.group.style.display !== 'none'){ kv.vid.play && kv.vid.play(); } } } catch(_){}
-    }
-  });
-
-  // Throttle while scrolling (reduce battery usage on mobile)
-  let _scrollTimer;
-  window.addEventListener('scroll', () => {
-    if (IS_MOBILE) {
-      running = false;
-      clearTimeout(_scrollTimer);
-      _scrollTimer = setTimeout(() => { running = !PREFERS_REDUCED_MOTION; }, 150);
-    }
-  }, { passive: true });
-
-  // Respect reduced motion at startup
-  if (PREFERS_REDUCED_MOTION) {
-    IDLE_AMPLITUDE = 0;
-    running = false; // stop continuous animation; interactions will force renders
-    RECOMPUTE_INTERVAL = Math.max(RECOMPUTE_INTERVAL, 24);
-    updateBackgroundBlur();
-  }
 })();
 
 // --- NEW: point-in-polygon hit-test for full-blob hover area ---
