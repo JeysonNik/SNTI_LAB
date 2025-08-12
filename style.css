@@ -195,14 +195,14 @@ a:hover {box-shadow: 0 0 5px 1px white;}
   position: relative;
   /* let content define the height */
   height: auto;
-  align-items: end;
+  align-items: start;
 }
 
 /* Footer Left Section */
 .footer-left {
   display: flex;
   flex-direction: column;
-  justify-content: space-between;
+  justify-content: flex-start;
   gap: 2rem;
 }
 
@@ -237,7 +237,7 @@ h1, h2, h3, h4, h5, h6 {
   justify-content: flex-end;
   align-self: end;
   align-items: flex-start;
-  padding-top: 6rem;
+  padding-top: 2rem;
 }
 
 /* Info Row - vertical layout for Location and Hours */
@@ -379,6 +379,22 @@ h1, h2, h3, h4, h5, h6 {
   width: 100%;
 }
 
+/* Footer bottom bar */
+.footer-left .footer-bottom {
+  width: 95%;
+  max-width: 1400px;
+  margin: 10px 0 0;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  justify-content: flex-start;
+  gap: 12px;
+}
+
+.footer-left .footer-bottom .social-icons {
+  margin: 0;
+}
+
 /* Mobile responsiveness for footer */
 @media (max-width: 768px) {
   #contactsFooter {
@@ -396,6 +412,8 @@ h1, h2, h3, h4, h5, h6 {
   .cta-link {
     padding: 1.2rem 2.5rem;
     font-size: 1.2rem;
+  margin-left: auto;
+  margin-right: auto; /* center CTA on tablets/mobiles */
   }
   
   .social-icons {
@@ -415,6 +433,25 @@ h1, h2, h3, h4, h5, h6 {
   .footer-right {
     padding-top: 1rem;
     justify-content: flex-start;
+  }
+
+  /* Center contact form and make it 95% width */
+  .contact-form-container {
+    align-items: center;
+  }
+  .contact-form {
+    width: 95%;
+    max-width: 95%;
+  }
+
+  /* Footer bottom stacks on mobile */
+  .footer-left .footer-bottom {
+    flex-direction: column;
+    align-items: center;
+    gap: 12px;
+  }
+  .footer-left .footer-bottom .social-icons {
+    justify-content: center;
   }
 }
 
@@ -446,6 +483,14 @@ h1, h2, h3, h4, h5, h6 {
   .footer-right {
     padding-top: 1rem;
     justify-content: flex-start;
+  }
+
+  .contact-form {
+    width: 95%;
+  }
+
+  .footer-left .footer-bottom {
+    gap: 10px;
   }
 }
 
@@ -562,6 +607,51 @@ foreignObject {
 }
 
 @media (max-width: 600px) {
+  /* Filter bar mobile optimizations */
+  #filterBar {
+    display: grid;
+    grid-template-columns: 1fr minmax(110px, 28%);
+    align-items: center;
+    gap: 8px;
+    margin-top: 6px;
+  }
+  #filterBar .filters {
+    gap: 8px;
+    flex-wrap: nowrap;
+    min-width: 0; /* allow shrinking */
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+    scrollbar-width: none; /* Firefox */
+    padding-bottom: 2px; /* avoid clipping shadows */
+  }
+  #filterBar .filters::-webkit-scrollbar { display: none; }
+  #filterBar span {
+    padding: 6px 8px;
+    font-size: 0.9rem;
+    border-radius: 6px;
+  }
+  #filterBar input {
+    width: 100%;
+    min-width: 110px;
+    max-width: 200px;
+    padding: 6px 8px;
+    font-size: 0.95rem;
+  }
+  /* Extra-narrow devices */
+  @media (max-width: 380px) {
+    #filterBar input {
+      min-width: 96px;
+      font-size: 0.85rem;
+      padding: 5px 8px;
+    }
+  }
+  /* Hide description controls and text on mobile */
+  #filterBar .desc-toggle,
+  #filterBar .bar-desc,
+  #filterBar .btn-desc {
+    display: none !important;
+  }
+
   #contactsFooter {
     margin: 40px auto 20px;
     padding: 30px 0;
@@ -581,5 +671,22 @@ foreignObject {
   
   .footer-right {
     grid-template-columns: 1fr;
+  }
+
+  /* Make Location and Hours horizontal on mobile */
+  .info-row {
+    flex-direction: row;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 12px;
+  }
+  .info-item {
+    flex: 1 1 50%;
+    min-width: 0;
+  }
+  /* Center CTA on mobile widths */
+  .cta-link {
+    margin-left: auto;
+    margin-right: auto;
   }
 }
