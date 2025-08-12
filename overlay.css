@@ -1,0 +1,431 @@
+/* Base overlay container is already in style.css; below are the layout pieces */
+:root {
+  --ov-gap: 20px;
+  --ov-pad: 28px;
+  --ov-card-bg: rgba(255,255,255,0.04);
+  --ov-border: 1px solid rgba(255,255,255,0.08);
+}
+
+.overlay .overlay-content {
+  /* ensure our grid can take full height for inner sizing */
+  overflow: hidden;
+  position: relative;
+}
+
+/* Put close button above all */
+.overlay .close-btn {
+  z-index: 2000;
+}
+
+/* grid fills the overlay content */
+.ov-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr; /* split vertically 50/50 */
+  gap: var(--ov-gap);
+  width: 100%;
+  height: 100%;
+  padding: var(--ov-pad);
+  box-sizing: border-box;
+}
+
+/* columns */
+.ov-col {
+  display: flex;
+  flex-direction: column;
+  gap: var(--ov-gap);
+  min-height: 0;
+  align-items: stretch; /* ensure child stretches to top/width */
+}
+.ov-col.slider-col { overflow: hidden; }
+.ov-col.content-col {
+  overflow: auto;
+  justify-content: flex-start; /* Changed from space-between to start */
+  gap: 14px; /* Consistent gap */
+}
+
+/* ensure slider child stretches and starts at the top */
+.ov-col {
+  align-items: stretch;
+}
+
+/* slider stays at top and fills column */
+.ov-slider {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  min-height: 0;
+  margin-top: 0; /* stick to top */
+}
+
+/* main image container must be positioned for overlay */
+.ov-slider .ov-main {
+  /* override aspect box to grow */
+  aspect-ratio: auto;
+  height: auto;
+  flex: 1 1 auto;
+  min-height: 0;
+  position: relative; /* required for overlay title */
+  width: 100%;
+  border-radius: 12px;
+  overflow: hidden;
+  background: #000;
+  border: var(--ov-border);
+  cursor: grab; /* NEW: указываем что элемент интерактивный */
+  user-select: none; /* NEW: предотвращаем выделение текста */
+}
+
+.ov-slider .ov-main:active {
+  cursor: grabbing; /* NEW: изменяем курсор при клике */
+}
+
+/* NEW: добавляем визуальную подсказку при наведении */
+.ov-slider .ov-main::before {
+  content: '';
+  position: absolute;
+  top: 50%;
+  right: 12px;
+  transform: translateY(-50%);
+  width: 20px;
+  height: 20px;
+  background: rgba(255,255,255,0.6);
+  border-radius: 50%;
+  opacity: 0; /* Скрываем подсказку полностью */
+  transition: opacity 0.3s ease;
+  z-index: 4;
+  pointer-events: none;
+  /* Убираем SVG иконку */
+  background-image: none;
+  display: none; /* Полностью скрываем элемент */
+}
+
+.ov-slider .ov-main:hover::before {
+  opacity: 0; /* Не показываем даже при наведении */
+}
+
+.ov-slider .ov-main img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+  pointer-events: none; /* NEW: предотвращаем события на изображении */
+}
+
+/* Title overlay over the image (types 1/2) */
+.ov-slider .ov-main .ov-title.overlay {
+  position: absolute;
+  top: 12px;
+  left: 16px;
+  right: 16px;
+  z-index: 3; /* above image and dots */
+  max-width: 85%;
+  font-weight: 900; /* Используем максимальный вес Inter */
+  font-size: clamp(22px, 2.6vw, 38px);
+  line-height: 1.15;
+  color: #fff;
+  font-family: 'Inter', sans-serif; /* Заменяем на Inter */
+  text-shadow: 0 2px 10px rgba(0,0,0,0.55);
+  /* subtle chip for readability */
+  padding: 6px 10px;
+  border-radius: 10px;
+  background: linear-gradient(180deg, rgba(0,0,0,0.35), rgba(0,0,0,0.15));
+  border: 1px solid rgba(255,255,255,0.08);
+  backdrop-filter: blur(2px);
+}
+
+/* Dots overlay (centered, on top of image) */
+.ov-dots {
+  position: absolute;
+  left: 50%;
+  bottom: 14px;
+  transform: translateX(-50%);
+  display: flex;
+  gap: 10px;
+  padding: 6px 10px;
+  background: rgba(0,0,0,0.28);
+  border: 1px solid rgba(255,255,255,0.12);
+  border-radius: 999px;
+  z-index: 2;
+  pointer-events: auto; /* NEW: разрешаем клики по точкам */
+}
+.ov-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: rgba(255,255,255,0.45);
+  border: none;
+  padding: 0;
+  cursor: pointer;
+}
+.ov-dot.active {
+  background: #fff;
+}
+
+/* Hide legacy thumbs block if present */
+.ov-thumbs { display: none !important; }
+
+/* Title styles for different positions */
+.ov-title.right {
+  font-weight: 900;
+  font-size: clamp(20px, 2.2vw, 32px);
+  line-height: 1.15;
+  color: #fff;
+  margin-bottom: 16px;
+  padding-bottom: 12px;
+  border-bottom: 2px solid rgba(255,255,255,0.1);
+  font-family: 'Inter', sans-serif;
+}
+
+/* Adjust content spacing for types 1 and 2 with right titles */
+.ov-grid.type-1 .ov-col.content-col,
+.ov-grid.type-2 .ov-col.content-col {
+  gap: 14px; /* Reduced gap to make more room for text */
+}
+
+/* Increase text size and space for better readability */
+.ov-text {
+  font-size: 1rem; /* Increased from 0.95rem */
+  line-height: 1.5; /* Increased from 1.45 */
+  color: rgba(255,255,255,0.9);
+  margin-bottom: 16px; /* Increased from 12px */
+  flex-grow: 1; /* Allow text to take available space */
+  max-height: none; /* Remove height restrictions */
+  font-family: 'Inter', sans-serif;
+}
+
+/* Special handling for type 1 - more space for description */
+.ov-grid.type-1 .ov-text {
+  font-size: 1.05rem;
+  line-height: 1.55;
+  margin-bottom: 18px;
+  min-height: 120px; /* Ensure minimum height for description */
+}
+
+/* Special handling for type 2 - balanced space distribution */
+.ov-grid.type-2 .ov-text {
+  font-size: 1.02rem;
+  line-height: 1.52;
+  margin-bottom: 16px;
+  min-height: 100px; /* Ensure good height for description */
+}
+
+/* Type 3 small text adjustments */
+.ov-grid.type-3 .ov-text.small { 
+  padding: 12px 14px; /* Increased padding */
+  font-size: 0.95rem; /* Smaller font */
+  line-height: 1.45;
+  min-height: 180px; /* Увеличиваем с 100px до 180px для большего количества текста */
+  margin-bottom: 12px; /* Smaller margin */
+  flex-shrink: 0; /* Don't shrink */
+  max-height: none; /* Убираем ограничение по высоте */
+}
+
+/* Optimize content column layout for better space usage */
+.ov-col.content-col {
+  overflow: auto;
+  justify-content: flex-start; /* Changed from space-between to start */
+  gap: 14px; /* Consistent gap */
+}
+
+/* Ensure lists don't take too much space */
+.ov-list { 
+  display: flex; 
+  flex-direction: column; 
+  gap: 8px; /* Reduced from 10px */
+  flex-shrink: 0; /* Don't shrink lists */
+}
+
+.ov-item {
+  display: grid;
+  grid-template-columns: 55px 1fr; /* Slightly smaller images */
+  gap: 10px;
+  align-items: center;
+  background: var(--ov-card-bg);
+  border: var(--ov-border);
+  border-radius: 12px;
+  padding: 8px;
+  min-height: 55px; /* Ensure consistent height */
+}
+
+.ov-item .ov-thumbimg {
+  width: 55px; 
+  height: 55px; /* Slightly reduced */
+  border-radius: 8px; /* Расчет: 12px (внешний) - 8px (padding) = 4px, но не меньше половины размера картинки для круглого вида, поэтому 8px */
+  object-fit: cover; 
+  display: block;
+}
+
+.ov-item .ov-line-text { 
+  color: rgba(255,255,255,0.9); 
+  line-height: 1.35;
+  font-size: 0.9rem;
+  font-family: 'Inter', sans-serif;
+}
+
+/* Optimize block sizing for type 2 */
+.ov-block {
+  display: grid; 
+  align-items: center; 
+  gap: 12px;
+  grid-template-columns: 75px 1fr; /* Slightly smaller */
+  background: var(--ov-card-bg);
+  border: var(--ov-border);
+  border-radius: 12px;
+  padding: 10px;
+  flex-shrink: 0; /* Don't shrink blocks */
+}
+
+.ov-block.reverse { grid-template-columns: 1fr 75px; }
+
+.ov-block .ov-img {
+  width: 75px; 
+  height: 75px; /* Slightly reduced */
+  border-radius: 8px; /* Расчет: 12px (внешний) - 10px (padding) = 2px, но минимум для красивого вида 8px */
+  object-fit: cover; 
+  display: block;
+}
+
+.ov-block .ov-block-text { 
+  color: rgba(255,255,255,0.9); 
+  line-height: 1.4;
+  font-size: 0.95rem;
+  font-family: 'Inter', sans-serif;
+}
+
+/* Large image with caption (type 2 bottom) */
+.ov-figure {
+  background: var(--ov-card-bg);
+  border: var(--ov-border);
+  border-radius: 12px;
+  padding: 12px;
+  flex-shrink: 0; /* Don't shrink figures */
+}
+
+.ov-figure img {
+  width: 100%; 
+  max-height: 180px; /* Slightly reduced to make room for text */
+  object-fit: cover; 
+  border-radius: 6px; /* Расчет: 12px (внешний) - 12px (padding) = 0px, но для эстетики оставляем 6px */
+  display: block;
+}
+
+.ov-figure figcaption {
+  margin-top: 8px;
+  color: rgba(255,255,255,0.8); 
+  font-size: 0.9rem;
+  line-height: 1.35;
+  font-family: 'Inter', sans-serif;
+}
+
+/* Type tweaks */
+.ov-grid.type-3 .ov-title { margin-bottom: 8px; }
+.ov-grid.type-3 .ov-text.small { padding: 12px 14px; font-size: 0.98rem; }
+
+/* Type 3: bigger title on the left, aligned bottom-left */
+.ov-grid.type-3 .ov-title.left {
+  font-weight: 900;
+  font-size: clamp(24px, 2.8vw, 38px); /* Slightly smaller max */
+  line-height: 1.1;
+  margin-top: auto;        /* push to bottom within column */
+  align-self: flex-start;  /* bottom-left */
+  margin-bottom: 0; /* Remove bottom margin */
+  flex-shrink: 0; /* Don't shrink title */
+  font-family: 'Inter', sans-serif;
+}
+
+/* Special layout adjustments for type 3 */
+.ov-grid.type-3 .ov-col.content-col {
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between; /* Space between for type 3 */
+  overflow: hidden; /* Remove scrollbar for type 3 left column */
+  gap: 10px; /* Уменьшаем gap чтобы дать больше места тексту */
+}
+
+/* Ensure proper spacing in type 3 left column */
+.ov-grid.type-3 .ov-col.content-col > *:not(:last-child) {
+  margin-bottom: 12px; /* Reduced from 14px */
+}
+
+.ov-grid.type-3 .ov-col.content-col > .ov-title.left {
+  margin-bottom: 0; /* Title at bottom has no bottom margin */
+  margin-top: auto; /* Push to bottom */
+}
+
+/* Fix type 3 blocks - ensure proper order */
+.ov-grid.type-3 .ov-block {
+  display: grid; 
+  align-items: center; 
+  gap: 10px; /* Smaller gap for type 3 */
+  grid-template-columns: 70px 1fr; /* Smaller images for type 3 */
+  background: var(--ov-card-bg);
+  border: var(--ov-border);
+  border-radius: 12px;
+  padding: 8px; /* Smaller padding for type 3 */
+  flex-shrink: 0;
+}
+
+.ov-grid.type-3 .ov-block.reverse { 
+  grid-template-columns: 1fr 70px; /* Correct reverse order */
+}
+
+.ov-grid.type-3 .ov-block.reverse .ov-img { 
+  order: 2; /* Ensure image goes to the right in reverse */
+  grid-column: 2;
+}
+
+.ov-grid.type-3 .ov-block.reverse .ov-block-text { 
+  order: 1; /* Ensure text goes to the left in reverse */
+  grid-column: 1;
+}
+
+.ov-grid.type-3 .ov-block .ov-img {
+  width: 70px; 
+  height: 70px; /* Smaller for type 3 */
+  border-radius: 7px; /* Расчет: 12px (внешний) - 8px (padding) = 4px, но для баланса с размером 7px */
+  object-fit: cover; 
+  display: block;
+}
+
+.ov-grid.type-3 .ov-block .ov-block-text { 
+  color: rgba(255,255,255,0.9); 
+  line-height: 1.35;
+  font-size: 0.9rem; /* Smaller text for type 3 */
+  font-family: 'Inter', sans-serif;
+}
+
+/* Type 3 text adjustments */
+.ov-grid.type-3 .ov-text.small { 
+  padding: 12px 14px;
+  font-size: 0.95rem;
+  line-height: 1.45;
+  min-height: 180px; /* Увеличиваем с 100px до 180px для большего количества текста */
+  margin-bottom: 12px;
+  flex-shrink: 0;
+  max-height: none; /* Убираем ограничение по высоте */
+}
+
+/* Move close button for type 3 */
+.ov-grid.type-3 ~ .close-btn {
+  top: 40px; /* Move down */
+  right: 50px; /* Move left */
+}
+
+/* Alternative: apply to all overlays if needed */
+.overlay .close-btn {
+  z-index: 2000;
+  transition: all 0.2s ease;
+}
+
+/* Type 3 specific close button positioning */
+.overlay:has(.type-3) .close-btn {
+  top: 40px;
+  right: 50px;
+}
+
+/* Responsive stacking */
+@media (max-width: 980px) {
+  .ov-grid { grid-template-columns: 1fr; }
+  .ov-col.slider-col { overflow: hidden; }
+  .ov-col.content-col { overflow: auto; }
+}
+
