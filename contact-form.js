@@ -3,8 +3,8 @@
 
   // Конфигурация
   const CONFIG = {
-    // Заглушка - пользователь должен заменить на свой ключ
-    WEB3FORMS_ACCESS_KEY: 'b6dcc0e6-10b1-42ef-809f-7c1550ebc1ab',
+    // Ключ берём из hidden input, если он есть, иначе используем заглушку
+    WEB3FORMS_ACCESS_KEY: (document.querySelector('#contactForm input[name="access_key"]')?.value) || 'YOUR_ACCESS_KEY_HERE',
     API_URL: 'https://api.web3forms.com/submit',
     MESSAGES: {
       success: 'Thank you! Your message has been sent successfully.',

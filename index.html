@@ -3,7 +3,13 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width,initial-scale=1" />
-  <title>SNTI Lab — Voronoi blobs integrated (Prototype) — FILTER & SEARCH (fixed)</title>
+  <title>SNTI Lab</title>
+  <meta name="description" content="SNTI Lab — interactive Voronoi blobs portfolio with filtering, search, and animated overlays.">
+  <meta property="og:title" content="SNTI Lab — Interactive Portfolio">
+  <meta property="og:description" content="Explore projects across Analysis, Optimization, and Formation with fluid Voronoi visuals.">
+  <meta property="og:type" content="website">
+  <meta property="og:url" content="">
+  <meta property="og:image" content="">
   
   <!-- Google Fonts для технологичного но читаемого шрифта -->
   <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -74,12 +80,12 @@
 
 <div id="filterBar">
   <div class="filters">
-    <span data-filter="all" class="active">SNTI</span>
-    <span data-filter="alpha">Analysis</span>
-    <span data-filter="beta">Optimization</span>
-    <span data-filter="gamma">Formation</span>
+    <span data-filter="all" class="active" role="button" tabindex="0">SNTI</span>
+    <span data-filter="alpha" role="button" tabindex="0">Analysis</span>
+    <span data-filter="beta" role="button" tabindex="0">Optimization</span>
+    <span data-filter="gamma" role="button" tabindex="0">Formation</span>
   </div>
-  <input type="text" id="searchInput" placeholder="Search..." />
+  <input type="text" id="searchInput" placeholder="Search..." aria-label="Search projects" />
 </div>
 <div id="filterDivider"></div>
 <div id="container">
@@ -91,7 +97,10 @@
   <!-- Left Column -->
   <div class="footer-left">
     <h2>Let's Work Together</h2>
-    <p>We are an international multidisciplinary design studio made up of a diverse group of creatives that have worked worldwide with municipal agencies, communities, institutions, private businesses, NGOs, and more, delivering permanent spatial interventions, temporary installations, workshops, lectures, development plans, and public policy recommendations.</p>
+  <p>We are an architecture and technology team merging design expertise with advanced digital tools to create faster, more precise, and more creative solutions for architecture and urban planning. Using computational design, AI algorithms, and custom software, we handle projects from quick analyses to complex parametric form generation.</p>
+
+  <p>Our three core areas — analysis, optimization, and formation — help developers, architects, and municipalities make informed decisions through clear, data-driven, and visually compelling results.</p>
+
     <a href="mailto:info@example.com" class="cta-link">Get In Touch</a>
     
     <!-- Social Icons -->
@@ -120,7 +129,7 @@
     
     <!-- Copyright -->
     <div class="copyright">
-      <p>Copyright © 2023 Urban Conga Inc., All rights reserved.</p>
+      <p>Copyright © 2025 SNTI LAB., All rights reserved.</p>
     </div>
   </div>
   
@@ -135,14 +144,14 @@
       
       <div class="info-item">
         <h4>Hours:</h4>
-        <p>Monday–Friday</br> 9AM–6PM EST</p>
+        <p>Monday–Friday</br> 9AM–6PM UTC+0</p>
       </div>
     </div>
     
     <!-- Contact Form -->
     <div class="contact-form-container">
       <form id="contactForm" class="contact-form">
-        <input type="hidden" name="access_key" value="YOUR_ACCESS_KEY_HERE">
+  <input type="hidden" name="access_key" value="b6dcc0e6-10b1-42ef-809f-7c1550ebc1ab">
         <input type="hidden" name="redirect" value="false">
         
         <div class="form-group">

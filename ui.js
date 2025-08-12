@@ -166,21 +166,30 @@
 
   // filter UI wiring
   const filterSpans = document.querySelectorAll('#filterBar .filters span');
-  filterSpans.forEach(span => span.addEventListener('click', () => {
-    const input = document.getElementById('searchInput');
-    if (input) input.value = '';
+  filterSpans.forEach(span => {
+    span.addEventListener('click', () => {
+      const input = document.getElementById('searchInput');
+      if (input) input.value = '';
 
-    // фильтрация (blobs app)
-    if (window.BlobsApp) {
-      window.BlobsApp.applyFilter(span.dataset.filter);
-      window.BlobsApp.setActiveFilter(span.dataset.filter);
-    }
+      // фильтрация (blobs app)
+      if (window.BlobsApp) {
+        window.BlobsApp.applyFilter(span.dataset.filter);
+        window.BlobsApp.setActiveFilter(span.dataset.filter);
+      }
 
-    // описания: показываем только для alpha/beta/gamma; для "all" — закрываем
-    const key = (span.dataset.filter || '').toLowerCase();
-    if (key === 'all'){ closeCurrentDesc(true); return; }
-    if (DESCRIPTIONS[key]) openDescFor(span, key);
-  }));
+      // описания: показываем только для alpha/beta/gamma; для "all" — закрываем
+      const key = (span.dataset.filter || '').toLowerCase();
+      if (key === 'all'){ closeCurrentDesc(true); return; }
+      if (DESCRIPTIONS[key]) openDescFor(span, key);
+    });
+    // keyboard support
+    span.addEventListener('keydown', (e) => {
+      if (e.key === 'Enter' || e.key === ' ') {
+        e.preventDefault();
+        span.click();
+      }
+    });
+  });
 
   const searchInput = document.getElementById('searchInput');
   if (searchInput) {
@@ -201,163 +210,4 @@
 
   // NOTE: Overlay rendering (showDetail, variants, slider) moved to overlay.js
 })();
-  const OVERLAY_TYPES = [
-    { when: { category: 'alpha' }, type: 1 },
-    { when: { category: 'beta'  }, type: 2 },
-    { when: { category: 'gamma' }, type: 3 }
-    // Examples:
-    // { when: { id: 'alpha3' }, type: 2 },
-    // { when: { title: 'Project Beta 2' }, type: 3 }
-  ];
-
-  function matchProject(v, cond) {
-    if (!cond) return false;
-    if (cond.id && v.id !== cond.id) return false;
-    if (cond.category && v.category !== cond.category) return false;
-    if (cond.title && !(v.title||'').includes(cond.title)) return false;
-    return true;
-  }
-  function pickOverlayType(v){
-    if (v && (v.layoutType === 1 || v.layoutType === 2 || v.layoutType === 3)) return v.layoutType;
-    for (const rule of OVERLAY_TYPES) if (matchProject(v, rule.when)) return rule.type;
-    return 1;
-  }
-
-  // Helpers to build pieces
-  function el(tag, cls, html){ const n = document.createElement(tag); if(cls) n.className = cls; if(html!=null) n.innerHTML = html; return n; }
-  function textFromHTML(str){
-    const s = (str||'').replace(/<[^>]*>/g, ' ').replace(/\s+/g,' ').trim();
-    return s || '';
-  }
-  function buildSlider(title, imgs){
-    const wrap = el('div','ov-slider');
-    if (title) wrap.appendChild(el('div','ov-title', title));
-    const main = el('div','ov-main'); const mainImg = el('img'); main.appendChild(mainImg);
-    const thumbs = el('div','ov-thumbs');
-    wrap.appendChild(main); wrap.appendChild(thumbs);
-    const list = (imgs && imgs.length ? imgs : []).slice();
-    if (!list.length) list.push('https://picsum.photos/seed/placeholder/800/600');
-    let active = 0;
-    function setActive(i){
-      active = i;
-      mainImg.src = list[active];
-      [...thumbs.children].forEach((t,idx)=>t.classList.toggle('active', idx===active));
-    }
-    list.forEach((src,i)=>{
-      const t = el('button','ov-thumb'); t.type='button';
-      const im = el('img'); im.src = src; t.appendChild(im);
-      t.onclick = ()=> setActive(i);
-      thumbs.appendChild(t);
-    });
-    setActive(0);
-    return wrap;
-  }
-
-  function buildList(lines){
-    const list = el('div','ov-list');
-    lines.forEach(li => {
-      const it = el('div','ov-item');
-      const img = el('img','ov-thumbimg'); img.src = li.img || 'https://picsum.photos/seed/line/160';
-      const txt = el('div','ov-line-text', li.text || '');
-      it.appendChild(img); it.appendChild(txt);
-      list.appendChild(it);
-    });
-    return list;
-  }
-  function buildBlock(img, text, reverse=false){
-    const blk = el('div','ov-block' + (reverse?' reverse':''));
-    const im = el('img','ov-img'); im.src = img || 'https://picsum.photos/seed/block/300';
-    const tx = el('div','ov-block-text', text || '');
-    blk.appendChild(im); blk.appendChild(tx);
-    return blk;
-  }
-  function buildFigure(img, caption){
-    const f = el('figure','ov-figure');
-    const im = el('img'); im.src = img || 'https://picsum.photos/seed/bottom/800/400';
-    const cap = el('figcaption',null, caption || '');
-    f.appendChild(im); f.appendChild(cap);
-    return f;
-  }
-
-  // Normalize per-project content (unique per project using v)
-  function deriveContent(v){
-    const imgs = Array.isArray(v.imgs) && v.imgs.length ? v.imgs : ['https://picsum.photos/seed/placeholder/800/600'];
-    const descHTML = v.text || `<p>${(v.title||'')}: description will be here.</p>`;
-    const plain = textFromHTML(descHTML);
-
-    // 3 short lines (for type 1)
-    const lines = [
-      { img: imgs[0], text: plain.slice(0, 80) || 'Short description A' },
-      { img: imgs[1] || imgs[0], text: plain.slice(80, 170) || 'Short description B' },
-      { img: imgs[2] || imgs[0], text: plain.slice(170, 260) || 'Short description C' }
-    ];
-
-    // One middle block + bottom figure (type 2)
-    const middleBlock = { img: imgs[1] || imgs[0], text: plain.slice(0, 160) || 'Additional details' };
-    const bottomFigure = { img: imgs[2] || imgs[0], caption: (v.caption || 'Caption for the image') };
-
-    // Two blocks for type 3 (one reversed)
-    const pairBlocks = [
-      { img: imgs[1] || imgs[0], text: plain.slice(0, 120), reverse: false },
-      { img: imgs[2] || imgs[0], text: plain.slice(120, 260), reverse: true }
-    ];
-
-    return { imgs, descHTML, lines, middleBlock, bottomFigure, pairBlocks };
-  }
-
-  // Replace old overlay renderer
-  // global showDetail used by script.js click handlers
-  window.showDetail = function showDetail(v, idx){
-    const overlay = document.getElementById('detailOverlay');
-    const oc = document.querySelector('#detailOverlay .overlay-content');
-    const closeBtn = document.getElementById('closeOverlay');
-
-    // Clear previous dynamic content but keep close button
-    while (closeBtn.nextSibling) closeBtn.parentNode.removeChild(closeBtn.nextSibling);
-
-    const type = pickOverlayType(v);
-    const data = deriveContent(v);
-
-    // Build two columns grid
-    const grid = el('div', `ov-grid type-${type}`);
-    const left = el('div','ov-col'); const right = el('div','ov-col');
-
-    if (type === 1) {
-      // Left: slider + title (title over slider)
-      left.appendChild(buildSlider(v.title || 'Project', data.imgs));
-      left.classList.add('slider-col'); // no scroll in slider column
-
-      // Right: text + 3 short lines with thumbs
-      const topText = el('div','ov-text'); topText.innerHTML = data.descHTML;
-      right.appendChild(topText);
-      right.appendChild(buildList(data.lines));
-    } else if (type === 2) {
-      // Left: slider + title (title over slider)
-      left.appendChild(buildSlider(v.title || 'Project', data.imgs));
-      left.classList.add('slider-col'); // no scroll in slider column
-
-      // Right: text + one block + large figure with caption
-      const topText = el('div','ov-text'); topText.innerHTML = data.descHTML;
-      right.appendChild(topText);
-      right.appendChild(buildBlock(data.middleBlock.img, data.middleBlock.text, false));
-      right.appendChild(buildFigure(data.bottomFigure.img, data.bottomFigure.caption));
-    } else {
-      // Type 3: slider on right (no title duplication on right)
-      const title = el('div','ov-title', v.title || 'Project');
-      const smallText = el('div','ov-text small'); smallText.innerHTML = data.descHTML;
-      left.appendChild(title);
-      left.appendChild(smallText);
-      data.pairBlocks.forEach(b => left.appendChild(buildBlock(b.img, b.text, !!b.reverse)));
-
-      right.appendChild(buildSlider(null, data.imgs));
-      right.classList.add('slider-col'); // no scroll in slider column
-    }
-
-    grid.appendChild(left); grid.appendChild(right);
-    closeBtn.insertAdjacentElement('afterend', grid);
-
-    overlay.classList.add('visible');
-    document.body.classList.add('blurred');
-  };
-
 

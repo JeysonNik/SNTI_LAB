@@ -32,9 +32,14 @@
 .form-input:focus,
 .form-textarea:focus {
   outline: none;
-  border: 1px solid rgba(0, 255, 136, 0.5);
-  background: rgba(0, 0, 0, 0.4);
-  box-shadow: 0 0 0 2px rgba(0, 255, 136, 0.1);
+  border: 1px solid transparent;
+  background:
+    linear-gradient(rgba(0,0,0,0.4), rgba(0,0,0,0.4)) padding-box,
+    linear-gradient(135deg, #4f46e520, #60a5fa25, #34d39925, #6366f125) border-box;
+  box-shadow:
+    0 0 0 1px rgba(122,92,255,0.28),
+    0 0 14px rgba(255,101,212,0.22),
+    0 0 24px rgba(0,217,255,0.22);
 }
 
 .form-input::placeholder,
@@ -54,12 +59,12 @@
   font-size: 1rem;
   font-weight: 600;
   color: #fff;
-  background: transparent;
-  border: 2px solid rgba(255, 255, 255, 0.3);
-  border-radius: 6px;
+  background: #000;
+  border: 1px solid #fff;
+  border-radius: 8px;
   cursor: pointer;
   font-family: 'Inter', sans-serif;
-  transition: all 0.3s ease;
+  transition: box-shadow 160ms ease, border-color 160ms ease, transform 120ms ease, background 160ms ease;
   position: relative;
   overflow: hidden;
   text-transform: uppercase;
@@ -67,9 +72,18 @@
   margin-top: 8px;
 }
 
-.form-button:hover {
-  border-color: #00ff88;
-  background: rgba(0, 255, 136, 0.1);
+.form-button:hover,
+.form-button:focus-visible {
+  outline: none;
+  border: 1px solid transparent;
+  background:
+    linear-gradient(#000, #000) padding-box,
+    linear-gradient(135deg, #4f46e515, #60a5fa18, #34d39918, #6366f118) border-box;
+  animation: hue-spin 12s linear infinite;
+  box-shadow:
+    0 0 0 1px rgba(122,92,255,0.28),
+    0 0 14px rgba(255,101,212,0.22),
+    0 0 24px rgba(0,217,255,0.22);
   transform: translateY(-1px);
 }
 
@@ -81,8 +95,8 @@
   opacity: 0.6;
   cursor: not-allowed;
   transform: none;
-  border-color: rgba(255, 255, 255, 0.2);
-  background: transparent;
+  border-color: rgba(255, 255, 255, 0.1);
+  background: #000;
 }
 
 /* Success/Error Messages */

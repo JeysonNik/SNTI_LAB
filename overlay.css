@@ -122,7 +122,7 @@
   font-size: clamp(22px, 2.6vw, 38px);
   line-height: 1.15;
   color: #fff;
-  font-family: 'Inter', sans-serif; /* Заменяем на Inter */
+  font-family: 'Bauhaus', 'Inter', sans-serif;
   text-shadow: 0 2px 10px rgba(0,0,0,0.55);
   /* subtle chip for readability */
   padding: 6px 10px;
@@ -172,7 +172,7 @@
   margin-bottom: 16px;
   padding-bottom: 12px;
   border-bottom: 2px solid rgba(255,255,255,0.1);
-  font-family: 'Inter', sans-serif;
+  font-family: 'Bauhaus', 'Inter', sans-serif;
 }
 
 /* Adjust content spacing for types 1 and 2 with right titles */
@@ -329,7 +329,7 @@
   align-self: flex-start;  /* bottom-left */
   margin-bottom: 0; /* Remove bottom margin */
   flex-shrink: 0; /* Don't shrink title */
-  font-family: 'Inter', sans-serif;
+  font-family: 'Bauhaus', 'Inter', sans-serif;
 }
 
 /* Special layout adjustments for type 3 */

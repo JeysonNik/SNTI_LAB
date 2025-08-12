@@ -1,37 +1,42 @@
+/* Local Bauhaus font family */
+@font-face {
+  font-family: 'Bauhaus';
+  src: url('Bauhaus Font Family/BauhausRegular.ttf') format('truetype');
+  font-weight: 400;
+  font-style: normal;
+  font-display: swap;
+}
+@font-face {
+  font-family: 'Bauhaus';
+  src: url('Bauhaus Font Family/BauhausItalic.ttf') format('truetype');
+  font-weight: 400;
+  font-style: italic;
+  font-display: swap;
+}
+@font-face {
+  font-family: 'Bauhaus';
+  src: url('Bauhaus Font Family/BauhausBold.ttf') format('truetype');
+  font-weight: 700;
+  font-style: normal;
+  font-display: swap;
+}
+@font-face {
+  font-family: 'Bauhaus';
+  src: url('Bauhaus Font Family/BauhausBoldItalic.ttf') format('truetype');
+  font-weight: 700;
+  font-style: italic;
+  font-display: swap;
+}
+
 /* Импорт технологичного шрифта Inter */
 @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&display=swap');
-#contactsFoote#contactsFooter {
-  display: grid;
-  grid-template-columns: 70% 30%;
-  gap: 4rem;
-  width: 95%;
-  max-width: 1400px;
-  margin: 10px auto 20px;
-  padding: 30px 0;
-  color: #fff;
-  border-top: 1px solid rgba(255, 255, 255, 0.1);
-  background: transparent;
-  position: relative;
-  height: 70vh;
-  align-items: end;
- 
-  grid-template-columns: 1fr 1fr;
-  gap: 4rem;
-  width: 95%;
-  max-width: 1400px;
-  margin: 10px auto 20px;
-  padding: 30px 0;
-  color: #fff;
-  border-top: 1px solid rgba(255, 255, 255, 0.1);
-  background: transparent;
-  position: relative;
-  height: 70vh;
-  align-items: end;
- padding: 0; box-sizing: border-box; }
+/* removed invalid/duplicate footer selector block */
 body, html { 
   width: 100%; 
   height: 100%; 
-  overflow: auto; 
+  /* Prevent horizontal scroll while keeping vertical scrolling */
+  overflow-x: hidden;
+  overflow-y: auto;
   background: #111; 
   font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
   transition: filter 0.5s ease; 
@@ -45,7 +50,7 @@ body, html {
   transform: translate(-50%, -50%);
   font-size: 20vw;
   font-weight: 800;
-  font-family: 'Inter', sans-serif;
+  font-family: 'Bauhaus', 'Inter', sans-serif;
   color: rgba(255,255,255,0.1);
   text-align: center;
   white-space: pre-line;
@@ -130,7 +135,7 @@ body, html {
   max-width: 0;             /* изначально скрыт */
   opacity: 0;
   margin-left: calc(-1 * var(--filters-gap, 20px) + 6px);
-  color: rgba(255,255,255,0.85);
+  color: #94a3b8;
   font-size: 0.95rem;
   transition: max-width 240ms ease, opacity 140ms ease;
   vertical-align: middle;
@@ -144,7 +149,7 @@ body, html {
   max-width: 0;           /* скрыто по умолчанию */
   opacity: 0;
   margin-left: calc(-1 * var(--filters-gap, 20px) + 6px);
-  color: rgba(255,255,255,0.85);
+  color: #94a3b8;
   font-size: 0.95rem;
   line-height: 1;       /* keep same as buttons */
   /* optional: ensure baseline alignment identical */
@@ -155,12 +160,11 @@ body, html {
 #filterBar .btn-desc.open { opacity: 1; }
 
 #filterDivider { width: 95%; height: 1px; background: #555; margin: 5px auto; }
-#container { position: relative; width: 95%; height: calc(100% - 60px); margin: 0 auto; z-index: 1; }
+#container { position: relative; width: 95%; height: calc(100% - 60px); margin: 0 auto; z-index: 1; overflow: hidden; }
 svg { width:100%; height:100%; display:block; }
 .label {
   pointer-events: none;
   transition: opacity 200ms ease;
-  max-width: 10px;
   white-space: normal;
   word-wrap: break-word;
   text-align: center;
@@ -189,7 +193,8 @@ a:hover {box-shadow: 0 0 5px 1px white;}
   border-top: 1px solid rgba(255, 255, 255, 0.1);
   background: transparent;
   position: relative;
-  height: 5vh;
+  /* let content define the height */
+  height: auto;
   align-items: end;
 }
 
@@ -201,16 +206,18 @@ a:hover {box-shadow: 0 0 5px 1px white;}
   gap: 2rem;
 }
 
+/* Use Bauhaus for all headings across the site */
+h1, h2, h3, h4, h5, h6 {
+  font-family: 'Bauhaus', 'Inter', sans-serif;
+}
+
 .footer-left h2 {
-  font-family: 'Inter', 'Arial', sans-serif;
+  font-family: 'Bauhaus', 'Inter', 'Arial', sans-serif;
   font-size: 3rem;
   font-weight: 700;
   line-height: 1.2;
   margin: 0;
-  background: linear-gradient(135deg, #64748b 0%, #475569 100%);
-  -webkit-background-clip: text;
-  -webkit-text-fill-color: transparent;
-  background-clip: text;
+  color: #ffffff;
 }
 
 .footer-left p {
@@ -218,8 +225,8 @@ a:hover {box-shadow: 0 0 5px 1px white;}
   font-size: 1.1rem;
   line-height: 1.6;
   color: #94a3b8;
-  margin: 1.5rem 0;
-  max-width: 90%;
+  margin: 1rem 0 0.75rem;
+  max-width: 95ch;
 }
 
 /* Footer Right Section */
@@ -275,23 +282,35 @@ a:hover {box-shadow: 0 0 5px 1px white;}
   display: flex;
   align-items: center;
   justify-content: center;
-  padding: 1.5rem 1rem;
-  background: linear-gradient(135deg, #006aff4e 0%, #0851b850 100%);
+  padding: 1.2rem 1rem;
+  background: #000;
   color: #ffffff;
   text-decoration: none;
-  border-radius: 12px;
+  border-radius: 10px;
   font-family: 'Inter', 'Arial', sans-serif;
   font-weight: 600;
-  font-size: 1.3rem;
-  transition: all 0.3s ease;
+  font-size: 1.2rem;
+  transition: box-shadow 160ms ease, border-color 160ms ease, transform 120ms ease, background 160ms ease;
   margin: 0rem 0;
   width: 264px;
+  border: 1px solid #fff;
+  position: relative;
+  z-index: 0;
 }
 
-
-.cta-link:hover {
+.cta-link:hover,
+.cta-link:focus-visible {
+  outline: none;
+  border: 1px solid transparent;
+  background:
+    linear-gradient(#000, #000) padding-box,
+    linear-gradient(135deg, #4f46e515, #60a5fa18, #34d39918, #6366f118) border-box;
+  animation: hue-spin 12s linear infinite;
+  box-shadow:
+    0 0 0 1px rgba(122,92,255,0.28),
+    0 0 14px rgba(255,101,212,0.22),
+    0 0 24px rgba(0,217,255,0.22);
   transform: translateY(-2px);
-  box-shadow: 0 8px 24px rgba(100, 116, 139, 0.3);
 }
 
 /* Social Icons */
@@ -302,24 +321,34 @@ a:hover {box-shadow: 0 0 5px 1px white;}
 }
 
 .social-icons a {
-  color: #888888;
-  transition: all 0.3s ease;
+  color: #cbd5e1;
+  transition: box-shadow 160ms ease, border-color 160ms ease, transform 120ms ease, background 160ms ease, color 160ms ease;
   display: flex;
   align-items: center;
   justify-content: center;
   width: 48px;
   height: 48px;
   border-radius: 50%;
-  background: #1a1a1a;
-  border: 1px solid #333333;
+  background: #000;
+  border: 1px solid #fff;
+  position: relative;
+  z-index: 0;
 }
 
-.social-icons a:hover {
-  color: #64748b;
-  background: #222222;
-  border-color: #64748b;
+.social-icons a:hover,
+.social-icons a:focus-visible {
+  outline: none;
+  color: #fff;
+  border: 1px solid transparent;
+  background:
+    linear-gradient(#000, #000) padding-box,
+    linear-gradient(135deg, #4f46e515, #60a5fa18, #34d39918, #6366f118) border-box;
+  animation: hue-spin 12s linear infinite;
+  box-shadow:
+    0 0 0 1px rgba(122,92,255,0.28),
+    0 0 14px rgba(255,101,212,0.22),
+    0 0 24px rgba(0,217,255,0.22);
   transform: translateY(-2px);
-  box-shadow: none;
 }
 
 .social-icons svg {
