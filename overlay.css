@@ -7,8 +7,8 @@
 }
 
 .overlay .overlay-content {
-  /* ensure our grid can take full height for inner sizing */
-  overflow: hidden;
+  /* allow vertical scrolling when content is taller than viewport */
+  overflow: auto;
   position: relative;
 }
 
@@ -17,13 +17,29 @@
   z-index: 2000;
 }
 
+/* Mobile-friendly close button */
+@media (max-width: 600px) {
+  .overlay .close-btn {
+    position: sticky;
+    top: calc(env(safe-area-inset-top, 0px) + 12px);
+    right: 16px;
+    margin-left: auto;
+    font-size: 2rem;
+    padding: 6px 10px;
+    background: rgba(0,0,0,0.35);
+    border-radius: 8px;
+    backdrop-filter: blur(4px);
+  }
+}
+
 /* grid fills the overlay content */
 .ov-grid {
   display: grid;
   grid-template-columns: 1fr 1fr; /* split vertically 50/50 */
   gap: var(--ov-gap);
   width: 100%;
-  height: 100%;
+  /* let content define height; parent overlay-content scrolls */
+  min-height: 100%;
   padding: var(--ov-pad);
   box-sizing: border-box;
 }
@@ -38,7 +54,8 @@
 }
 .ov-col.slider-col { overflow: hidden; }
 .ov-col.content-col {
-  overflow: auto;
+  /* let outer container handle scroll on mobile */
+  overflow: visible;
   justify-content: flex-start; /* Changed from space-between to start */
   gap: 14px; /* Consistent gap */
 }
@@ -426,6 +443,29 @@
 @media (max-width: 980px) {
   .ov-grid { grid-template-columns: 1fr; }
   .ov-col.slider-col { overflow: hidden; }
-  .ov-col.content-col { overflow: auto; }
+  .ov-col.content-col { overflow: visible; }
+}
+
+/* Mobile layout and scrolling improvements */
+@media (max-width: 600px) {
+  /* Give overlay content a bit more breathing room on mobile */
+  .overlay .overlay-content { width: 98%; height: 98%; }
+
+  /* Stack columns and reduce gaps */
+  .ov-grid { gap: 14px; padding: 16px; }
+
+  /* Make slider height adaptive rather than filling entire column */
+  .ov-slider { height: auto; }
+  .ov-slider .ov-main { height: auto; max-height: 55vh; }
+  .ov-slider .ov-main img { height: 100%; object-fit: cover; }
+
+  /* Ensure text blocks have comfortable sizing */
+  .ov-text { font-size: 1rem; line-height: 1.55; }
+  .ov-list { gap: 10px; }
+  .ov-item { grid-template-columns: 52px 1fr; padding: 8px; }
+  .ov-item .ov-thumbimg { width: 52px; height: 52px; }
+
+  /* Allow the whole overlay to scroll vertically */
+  .overlay .overlay-content { overflow-y: auto; -webkit-overflow-scrolling: touch; }
 }
 

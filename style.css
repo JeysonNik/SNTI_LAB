@@ -41,6 +41,8 @@ body, html {
   font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
   transition: filter 0.5s ease; 
 }
+/* Freeze background scroll when overlay is visible */
+body.blurred { overflow: hidden; }
 #container.blurred { filter: blur(8px); }
 #brandBg {
   position: absolute;
