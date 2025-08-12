@@ -25,6 +25,7 @@
   // Util
   function el(tag, cls, html){ const n = document.createElement(tag); if(cls) n.className = cls; if(html!=null) n.innerHTML = html; return n; }
   function textFromHTML(str){ const s = (str||'').replace(/<[^>]*>/g, ' ').replace(/\s+/g,' ').trim(); return s || ''; }
+  function isMobile(){ return window.matchMedia && window.matchMedia('(max-width: 980px)').matches; }
 
   // Cleanups (intervals, listeners) for current overlay
   let overlayCleanups = [];
@@ -50,7 +51,20 @@
     
     function setActive(i){
       active = i;
-      mainImg.src = list[active];
+      
+      // Add smooth transition for mobile
+      if (window.matchMedia && window.matchMedia('(max-width: 980px)').matches) {
+        mainImg.style.transition = 'opacity 0.3s ease';
+        mainImg.style.opacity = '0';
+        
+        setTimeout(() => {
+          mainImg.src = list[active];
+          mainImg.style.opacity = '1';
+        }, 150);
+      } else {
+        mainImg.src = list[active];
+      }
+      
       [...dots.children].forEach((d,idx)=>d.classList.toggle('active', idx===active));
     }
 
@@ -71,9 +85,80 @@
     // NEW: добавляем обработчик колесика к main элементу
     main.addEventListener('wheel', handleWheel, { passive: false });
     
-    // NEW: cleanup функция для удаления обработчика
+    // NEW: Touch/swipe support for mobile
+    let touchStartX = 0;
+    let touchStartY = 0;
+    let touchEndX = 0;
+    let touchEndY = 0;
+    const minSwipeDistance = 50; // минимальная дистанция для регистрации свайпа
+    const maxVerticalMovement = 100; // максимальное вертикальное движение для горизонтального свайпа
+
+    function handleTouchStart(e) {
+      touchStartX = e.touches[0].clientX;
+      touchStartY = e.touches[0].clientY;
+    }
+
+    function handleTouchMove(e) {
+      // Предотвращаем скролл только если это горизонтальный свайп
+      const currentX = e.touches[0].clientX;
+      const currentY = e.touches[0].clientY;
+      const deltaX = Math.abs(currentX - touchStartX);
+      const deltaY = Math.abs(currentY - touchStartY);
+      
+      if (deltaX > deltaY && deltaX > 10) {
+        e.preventDefault(); // предотвращаем скролл страницы при горизонтальном свайпе
+      }
+    }
+
+    function handleTouchEnd(e) {
+      touchEndX = e.changedTouches[0].clientX;
+      touchEndY = e.changedTouches[0].clientY;
+      handleSwipe();
+    }
+
+    function handleSwipe() {
+      const deltaX = touchEndX - touchStartX;
+      const deltaY = Math.abs(touchEndY - touchStartY);
+      
+      // Проверяем, что это горизонтальный свайп
+      if (Math.abs(deltaX) > minSwipeDistance && deltaY < maxVerticalMovement) {
+        userInteracted = true;
+        
+        // Добавляем визуальную обратную связь
+        main.style.transform = 'scale(0.98)';
+        setTimeout(() => {
+          main.style.transform = 'scale(1)';
+        }, 100);
+        
+        if (deltaX > 0) {
+          // Свайп вправо - предыдущее изображение
+          setActive((active - 1 + list.length) % list.length);
+        } else {
+          // Свайп влево - следующее изображение
+          setActive((active + 1) % list.length);
+        }
+        
+        // Скрываем подсказку после первого свайпа
+        main.classList.remove('show-swipe-hint');
+        
+        // Добавляем тактильную обратную связь, если доступна
+        if (navigator.vibrate) {
+          navigator.vibrate(50);
+        }
+      }
+    }
+
+    // Добавляем touch обработчики
+    main.addEventListener('touchstart', handleTouchStart, { passive: true });
+    main.addEventListener('touchmove', handleTouchMove, { passive: false });
+    main.addEventListener('touchend', handleTouchEnd, { passive: true });
+    
+    // NEW: cleanup функция для удаления обработчиков
     pushCleanup(() => {
       main.removeEventListener('wheel', handleWheel);
+      main.removeEventListener('touchstart', handleTouchStart);
+      main.removeEventListener('touchmove', handleTouchMove);
+      main.removeEventListener('touchend', handleTouchEnd);
     });
 
     list.forEach((src,i)=>{
@@ -86,6 +171,14 @@
     const interval = setInterval(()=>{ if(userInteracted) return; setActive((active+1)%list.length); }, 3500);
     pushCleanup(()=> clearInterval(interval));
     setActive(0);
+
+    // Show swipe hint on mobile for a few seconds
+    if (window.matchMedia && window.matchMedia('(max-width: 980px)').matches) {
+      main.classList.add('show-swipe-hint');
+      setTimeout(() => {
+        main.classList.remove('show-swipe-hint');
+      }, 3000); // Hide hint after 3 seconds
+    }
 
     wrap.appendChild(main);
     return wrap;
@@ -119,6 +212,12 @@
     f.appendChild(im); f.appendChild(cap);
     return f;
   }
+
+  // Export builder functions to global scope for use in separate overlay files
+  window.buildSlider = buildSlider;
+  window.buildList = buildList;
+  window.buildBlock = buildBlock;
+  window.buildFigure = buildFigure;
 
   // UPDATED: use v.overlay data directly from content.js with more text content
   function deriveContent(v){
@@ -194,64 +293,32 @@
     const data = deriveContent(v);
     const title = v?.overlay?.title || v?.title || 'Project';
 
-    // Two-column grid
-    const grid = el('div', `ov-grid type-${type}`);
-    const left = el('div','ov-col');
-    const right = el('div','ov-col');
-
-    if (type === 1) {
-      // Left: slider without title (no overlay title)
-      left.appendChild(buildSlider(null, data.imgs));
-      left.classList.add('slider-col');
-      right.classList.add('content-col');
-
-      // Right: title + text + 3 short lines
-      const titleEl = el('div','ov-title right', title);
-      const topText = el('div','ov-text'); topText.innerHTML = data.descHTML;
-      right.appendChild(titleEl);
-      right.appendChild(topText);
-      right.appendChild(buildList(data.lines));
-    } else if (type === 2) {
-      // Left: slider without title (no overlay title)
-      left.appendChild(buildSlider(null, data.imgs));
-      left.classList.add('slider-col');
-      right.classList.add('content-col');
-
-      // Right: title + text + one block + large figure
-      const titleEl = el('div','ov-title right', title);
-      const topText = el('div','ov-text'); topText.innerHTML = data.descHTML;
-      right.appendChild(titleEl);
-      right.appendChild(topText);
-      right.appendChild(buildBlock(data.middleBlock.img, data.middleBlock.text, false));
-      right.appendChild(buildFigure(data.bottomFigure.img, data.bottomFigure.caption));
+    // Check if mobile layout should be used
+    if (isMobile()) {
+      // Mobile layout: single column, vertical order
+      console.log('Using mobile layout for overlay');
+      
+      // Use mobile layout function if available
+      if (window.buildMobileLayout) {
+        const mobileContainer = window.buildMobileLayout(title, data, type);
+        closeBtn.insertAdjacentElement('afterend', mobileContainer);
+      } else {
+        console.warn('Mobile layout function not loaded');
+      }
+      
+      // Mobile positioning handled by CSS with !important
+      closeBtn.style.top = '';
+      closeBtn.style.right = '';
     } else {
-      // Type 3: bigger title on the left, aligned bottom-left
-      const titleEl = el('div','ov-title left', title);
-      const smallText = el('div','ov-text small'); smallText.innerHTML = data.descHTML;
-
-      left.appendChild(smallText);
-      // Ensure blocks have explicit reverse property set correctly
-      data.pairBlocks.forEach((b, index) => {
-        const block = buildBlock(b.img, b.text, b.reverse);
-        left.appendChild(block);
-      });
-      left.appendChild(titleEl); // put title at the end so it sits at bottom with CSS
-      left.classList.add('content-col');
-
-      right.appendChild(buildSlider(null, data.imgs)); // no title on slider
-      right.classList.add('slider-col');
-    }
-
-    grid.appendChild(left); grid.appendChild(right);
-    closeBtn.insertAdjacentElement('afterend', grid);
-
-    // Adjust close button position for type 3
-    if (type === 3) {
-      closeBtn.style.top = '40px';
-      closeBtn.style.right = '50px';
-    } else {
-      closeBtn.style.top = '20px';
-      closeBtn.style.right = '30px';
+      // Desktop layout: two-column grid
+      console.log('Using desktop layout for overlay, type:', type);
+      
+      // Use desktop layout function if available
+      if (window.buildDesktopLayout) {
+        window.buildDesktopLayout(title, data, type, closeBtn);
+      } else {
+        console.warn('Desktop layout function not loaded');
+      }
     }
 
     closeBtn.style.zIndex = '2000';

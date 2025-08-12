@@ -1,0 +1,169 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Test Overlay - SNTI Lab</title>
+  
+  <!-- Google Fonts -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet">
+  
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body, html { 
+      width: 100%; 
+      height: 100%; 
+      background: #111; 
+      font-family: 'Inter', sans-serif; 
+      color: #fff;
+      padding: 20px;
+    }
+    
+    .test-buttons {
+      display: flex;
+      flex-direction: column;
+      gap: 20px;
+      max-width: 400px;
+      margin: 50px auto;
+    }
+    
+    .test-btn {
+      padding: 15px 20px;
+      background: #333;
+      color: #fff;
+      border: 1px solid #555;
+      border-radius: 8px;
+      cursor: pointer;
+      font-size: 16px;
+      transition: background 0.2s ease;
+    }
+    
+    .test-btn:hover {
+      background: #444;
+    }
+    
+    .device-info {
+      text-align: center;
+      margin-bottom: 30px;
+      padding: 20px;
+      background: rgba(255,255,255,0.05);
+      border-radius: 8px;
+    }
+    
+    .resize-instruction {
+      text-align: center;
+      margin-top: 20px;
+      color: #888;
+      font-size: 14px;
+    }
+  </style>
+  
+  <link rel="stylesheet" href="overlay.css">
+  <link rel="stylesheet" href="overlay.mobile.css" media="(max-width: 980px)">
+  
+  <script src="content.js"></script>
+  <script src="overlay.js"></script>
+  <script src="overlay.desktop.js"></script>
+  <script src="overlay.mobile.js"></script>
+</head>
+<body>
+
+<div class="device-info">
+  <h2>Overlay Test Page</h2>
+  <p>Current screen width: <span id="screenWidth"></span>px</p>
+  <p>Layout mode: <span id="layoutMode"></span></p>
+  <p>Mobile CSS loaded: <span id="mobileCss"></span></p>
+</div>
+
+<div class="test-buttons">
+  <button class="test-btn" onclick="testOverlay(1)">Test Type 1 Overlay (Analysis)</button>
+  <button class="test-btn" onclick="testOverlay(2)">Test Type 2 Overlay (Optimization)</button>
+  <button class="test-btn" onclick="testOverlay(3)">Test Type 3 Overlay (Formation)</button>
+</div>
+
+<div class="resize-instruction">
+  Resize window below/above 980px to test mobile/desktop switching
+</div>
+
+<!-- Overlay HTML -->
+<div class="overlay" id="detailOverlay">
+  <div class="overlay-content">
+    <div class="close-btn" id="closeOverlay">&times;</div>
+  </div>
+</div>
+
+<script>
+// Update screen info
+function updateScreenInfo() {
+  const width = window.innerWidth;
+  const isMobile = width <= 980;
+  
+  document.getElementById('screenWidth').textContent = width;
+  document.getElementById('layoutMode').textContent = isMobile ? 'Mobile' : 'Desktop';
+  
+  // Check if mobile CSS is loaded
+  const mobileMediaQuery = window.matchMedia('(max-width: 980px)');
+  document.getElementById('mobileCss').textContent = mobileMediaQuery.matches ? 'Yes' : 'No';
+}
+
+// Test overlay function
+function testOverlay(type) {
+  console.log('Testing overlay type:', type);
+  
+  // Sample project data
+  const projectData = {
+    id: `test${type}`,
+    title: `Test Project Type ${type}`,
+    category: type === 1 ? 'alpha' : (type === 2 ? 'beta' : 'gamma'),
+    overlay: {
+      layoutType: type,
+      title: `Test Project Type ${type}`,
+      images: [
+        "https://images.unsplash.com/photo-1754875177745-b09fcb123125?w=800",
+        "https://images.unsplash.com/photo-1539353721923-2801d3cab58a?w=800",
+        "https://images.unsplash.com/photo-1712313498043-a812f0ed0782?w=800"
+      ],
+      paragraphs: [
+        'This is a test paragraph for the overlay system. It demonstrates how text content is displayed in both mobile and desktop layouts.',
+        'The second paragraph provides additional details about the project, showing how longer text content is handled.',
+        'A third paragraph adds more content to test the scrolling behavior on mobile devices.'
+      ],
+      list: [
+        { img: "https://images.unsplash.com/photo-1556337410-473d87776943?w=400", text: 'First list item with description' },
+        { img: "https://images.unsplash.com/photo-1740906574432-4195b969ef24?w=400", text: 'Second list item with longer description text' },
+        { img: "https://plus.unsplash.com/premium_photo-1701158347546-4bd6c1a25154?w=400", text: 'Third list item for testing' }
+      ],
+      blocks: [
+        { img: "https://images.unsplash.com/photo-1737348793783-414ba6bfef81?w=400", text: 'Block content with technical details', reverse: false },
+        { img: "https://images.unsplash.com/photo-1754875177745-b09fcb123125?w=400", text: 'Second block with reverse layout', reverse: true }
+      ],
+      figure: { 
+        img: "https://images.unsplash.com/photo-1539353721923-2801d3cab58a?w=800", 
+        caption: `Figure caption for Type ${type} overlay test` 
+      }
+    }
+  };
+  
+  // Call showDetail function
+  if (window.showDetail) {
+    window.showDetail(projectData, 0);
+  } else {
+    console.error('showDetail function not found');
+  }
+}
+
+// Update screen info on resize
+window.addEventListener('resize', updateScreenInfo);
+updateScreenInfo();
+
+// Close overlay functionality
+document.getElementById('closeOverlay').onclick = () => {
+  document.getElementById('detailOverlay').classList.remove('visible');
+  document.body.classList.remove('blurred');
+};
+</script>
+
+</body>
+</html>
