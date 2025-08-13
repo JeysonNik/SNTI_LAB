@@ -152,7 +152,8 @@
 
   // RECOMPUTE_INTERVAL: минимальный интервал (ms) между пересчётами Voronoi/рендером — влияет на производительность.
   // Увеличьте, если хотите снизить нагрузку CPU, но учтите ухудшение плавности анимаций.
-  const RECOMPUTE_INTERVAL = 5; // уменьшить с 10 до 5 для более частого обновления
+  let RECOMPUTE_INTERVAL = 5; // уменьшить с 10 до 5 для более частого обновления
+  window.RECOMPUTE_INTERVAL = RECOMPUTE_INTERVAL; // Глобальная ссылка для мониторинга
 
   // DISPLAY_LERP: коэффициент сглаживания движения отображаемых позиций (dispX/dispY).
   // Меньше значение -> более плавное, но более медленное следование цели; больше -> более резкое движение.
@@ -169,7 +170,8 @@
   function randDensity(){ return 0.5 + Math.random()*1.6; }
 
   // --- blob model ---
-  const blobs = [];
+  window.blobs = [];
+  const blobs = window.blobs; // Локальная ссылка для удобства
   for(let i=0;i<BLOB_COUNT;i++){
     const x = Math.random()*(W*0.8)+W*0.1;
     const y = Math.random()*(H*0.5)+H*0.1;
@@ -397,8 +399,22 @@
   // -----------------------------------------------------------------------
 
   function computeVoronoiPaths(useDisp=true){
+    // VORONOI CACHING: проверяем кэш перед вычислением
+    const cacheKey = voronoiCache.createCacheKey(blobs, useDisp);
+    const cached = voronoiCache.get(cacheKey);
+    
+    if (cached) {
+      return cached;
+    }
+    
+    // Если нет значительного движения, возвращаем последний результат
+    if (!voronoiCache.hasSignificantMovement(blobs, useDisp) && _lastVoronoiInfos) {
+      return _lastVoronoiInfos;
+    }
+    
     const points = blobs.filter(b=>b.visible).map(b => useDisp ? [b.dispX, b.dispY] : [b.x, b.y]);
     if(points.length === 0) return blobs.map(b=>({path:'', pts:[]}));
+    
     const visibleIndices = blobs.map((b,i)=> b.visible ? i : -1).filter(i=>i>=0);
     const delaunay = d3.Delaunay.from(points);
     const vor = delaunay.voronoi([0,0,W,H]);
@@ -426,6 +442,11 @@
     }
     const mapped = blobs.map(b=>({path:'', pts:[]}));
     for(const item of out){ mapped[item.origIndex] = { path: item.path, pts: item.pts }; }
+    
+    // VORONOI CACHING: сохраняем результат в кэш
+    voronoiCache.set(cacheKey, mapped);
+    _lastVoronoiInfos = mapped;
+    
     return mapped;
   }
 
@@ -439,6 +460,173 @@
   // DRAG OPTIMIZATION: throttling для плавного перетаскивания
   let _lastDragUpdate = 0;
   let _dragThrottleMs = 8; // ~120fps для плавного дрэга
+  
+  // SPATIAL HASHING OPTIMIZATION: сетка для быстрого поиска коллизий O(n log n)
+  class SpatialHashGrid {
+    constructor(cellSize = 100) {
+      this.cellSize = cellSize;
+      this.grid = new Map();
+      this.lastUpdate = 0;
+      this.updateThrottle = 16; // Обновляем сетку 60fps
+    }
+    
+    // Получить ключ ячейки для координат
+    getCellKey(x, y) {
+      const cellX = Math.floor(x / this.cellSize);
+      const cellY = Math.floor(y / this.cellSize);
+      return `${cellX},${cellY}`;
+    }
+    
+    // Обновить сетку с текущими позициями блопов
+    update(blobs) {
+      const now = performance.now();
+      if (now - this.lastUpdate < this.updateThrottle) return;
+      this.lastUpdate = now;
+      
+      this.grid.clear();
+      
+      for (const blob of blobs) {
+        if (!blob.visible) continue;
+        
+        // Определяем какие ячейки занимает блоп (с учетом радиуса)
+        const minX = blob.x - blob.r;
+        const maxX = blob.x + blob.r;
+        const minY = blob.y - blob.r;
+        const maxY = blob.y + blob.r;
+        
+        const minCellX = Math.floor(minX / this.cellSize);
+        const maxCellX = Math.floor(maxX / this.cellSize);
+        const minCellY = Math.floor(minY / this.cellSize);
+        const maxCellY = Math.floor(maxY / this.cellSize);
+        
+        // Добавляем блоп во все занимаемые ячейки
+        for (let cellX = minCellX; cellX <= maxCellX; cellX++) {
+          for (let cellY = minCellY; cellY <= maxCellY; cellY++) {
+            const key = `${cellX},${cellY}`;
+            if (!this.grid.has(key)) {
+              this.grid.set(key, []);
+            }
+            this.grid.get(key).push(blob);
+          }
+        }
+      }
+    }
+    
+    // Получить потенциальные коллизии для блопа
+    getNearbyBlobs(blob) {
+      const nearby = new Set();
+      
+      // Проверяем все ячейки, которые может занимать блоп
+      const minX = blob.x - blob.r;
+      const maxX = blob.x + blob.r;
+      const minY = blob.y - blob.r;
+      const maxY = blob.y + blob.r;
+      
+      const minCellX = Math.floor(minX / this.cellSize);
+      const maxCellX = Math.floor(maxX / this.cellSize);
+      const minCellY = Math.floor(minY / this.cellSize);
+      const maxCellY = Math.floor(maxY / this.cellSize);
+      
+      for (let cellX = minCellX; cellX <= maxCellX; cellX++) {
+        for (let cellY = minCellY; cellY <= maxCellY; cellY++) {
+          const key = `${cellX},${cellY}`;
+          const cellBlobs = this.grid.get(key);
+          if (cellBlobs) {
+            for (const otherBlob of cellBlobs) {
+              if (otherBlob !== blob && otherBlob.visible) {
+                nearby.add(otherBlob);
+              }
+            }
+          }
+        }
+      }
+      
+      return Array.from(nearby);
+    }
+  }
+  
+  // Создаем spatial hash grid
+  const spatialGrid = new SpatialHashGrid(80); // Размер ячейки 80px
+  
+  // VORONOI CACHING OPTIMIZATION: умное кэширование Voronoi диаграмм
+  class VoronoiCache {
+    constructor() {
+      this.cache = new Map();
+      this.maxCacheSize = 20;
+      this.positionThreshold = 2; // Минимальное смещение для пересчета
+      this.lastPositions = new Map();
+    }
+    
+    // Создает ключ на основе позиций блопов
+    createCacheKey(blobs, useDisp = true) {
+      const positions = blobs
+        .filter(b => b.visible)
+        .map(b => {
+          const x = useDisp ? Math.round(b.dispX / this.positionThreshold) : Math.round(b.x / this.positionThreshold);
+          const y = useDisp ? Math.round(b.dispY / this.positionThreshold) : Math.round(b.y / this.positionThreshold);
+          return `${b.id}:${x},${y}`;
+        })
+        .sort() // Сортируем для консистентности
+        .join('|');
+      
+      return `${positions}_${useDisp ? 'disp' : 'real'}`;
+    }
+    
+    // Проверяет, значительно ли изменились позиции
+    hasSignificantMovement(blobs, useDisp = true) {
+      const currentKey = this.createCacheKey(blobs, useDisp);
+      const lastKey = this.lastPositions.get(useDisp ? 'disp' : 'real');
+      
+      if (!lastKey || lastKey !== currentKey) {
+        this.lastPositions.set(useDisp ? 'disp' : 'real', currentKey);
+        return true;
+      }
+      
+      return false;
+    }
+    
+    get(key) {
+      const cached = this.cache.get(key);
+      if (cached) {
+        // Обновляем время последнего использования
+        cached.lastUsed = performance.now();
+        return cached.data;
+      }
+      return null;
+    }
+    
+    set(key, data) {
+      // Ограничиваем размер кэша
+      if (this.cache.size >= this.maxCacheSize) {
+        // Удаляем самую старую запись
+        let oldestKey = null;
+        let oldestTime = Infinity;
+        
+        for (const [k, v] of this.cache.entries()) {
+          if (v.lastUsed < oldestTime) {
+            oldestTime = v.lastUsed;
+            oldestKey = k;
+          }
+        }
+        
+        if (oldestKey) {
+          this.cache.delete(oldestKey);
+        }
+      }
+      
+      this.cache.set(key, {
+        data: data,
+        lastUsed: performance.now()
+      });
+    }
+    
+    clear() {
+      this.cache.clear();
+      this.lastPositions.clear();
+    }
+  }
+  
+  const voronoiCache = new VoronoiCache();
   
   function morphPath(el, newD, duration=MORPH_DURATION){ 
     const old = el.getAttribute('d') || newD; 
@@ -476,8 +664,15 @@
 
   let lastCompute = 0;
   function recomputeAndRender(forceImmediate=false){
+    // PERFORMANCE MONITORING: проверяем возможность пропуска кадра
+    if (window.performanceMonitor && window.performanceMonitor.shouldSkipFrame() && !forceImmediate) {
+      console.log('⏭️ Skipping frame due to poor performance');
+      return;
+    }
+    
+    const renderStartTime = performance.now();
     const now = performance.now();
-    if(!forceImmediate && now - lastCompute < RECOMPUTE_INTERVAL) return; lastCompute = now;
+    if(!forceImmediate && now - lastCompute < window.RECOMPUTE_INTERVAL) return; lastCompute = now;
     const infos = computeVoronoiPaths(true);
     _lastVoronoiInfos = infos;
     
@@ -566,6 +761,20 @@
       }
       if (hovered.label && hovered.label.parentNode === hovered.group) {
         hovered.group.appendChild(hovered.label); // держим текст поверх FO
+      }
+    }
+    
+    // PERFORMANCE MONITORING: записываем время рендеринга
+    if (window.performanceMonitor) {
+      const renderTime = performance.now() - renderStartTime;
+      window.performanceMonitor.metrics.renderTime = renderTime;
+      window.performanceMonitor.metrics.blobCount = blobs.length;
+      
+      // Адаптивная настройка интервала
+      if (renderTime > 20) {
+        window.RECOMPUTE_INTERVAL = Math.min(window.RECOMPUTE_INTERVAL + 2, 100);
+      } else if (renderTime < 8 && window.RECOMPUTE_INTERVAL > 16) {
+        window.RECOMPUTE_INTERVAL = Math.max(window.RECOMPUTE_INTERVAL - 1, 16);
       }
     }
   }
@@ -690,9 +899,83 @@
   }
 
   function physicsStep(){
-    for(const b of blobs){ if(!b.isHovered && !b.isFrozen && b.visible){ b.vx *= 0.94; b.vy *= 0.94; b.vx += Math.sin((performance.now()/1000)+b.id*0.9) * IDLE_AMPLITUDE; b.vy += Math.cos((performance.now()/1000)+b.id*1.1) * IDLE_AMPLITUDE; b.x += b.vx; b.y += b.vy; } const gap = 8; if(b.x - b.r < gap){ b.x = gap + b.r; b.vx *= -0.42; } if(b.x + b.r > W - gap){ b.x = W - gap - b.r; b.vx *= -0.42; } if(b.y - b.r < gap){ b.y = gap + b.r; b.vy *= -0.42; } if(b.y + b.r > H - gap){ b.y = H - gap - b.r; b.vy *= -0.42; } }
-    for(let i=0;i<blobs.length;i++){ for(let j=i+1;j<blobs.length;j++){ const A=blobs[i], B=blobs[j]; if(!A.visible || !B.visible) continue; const dx=B.x-A.x, dy=B.y-A.y; const d=Math.hypot(dx,dy)||0.0001; const min=A.r+B.r+CENTER_GAP; if(d<min){ const overlap=(min-d)*0.6; const nx=dx/d, ny=dy/d; A.x -= nx*overlap*0.5; A.y -= ny*overlap*0.5; B.x += nx*overlap*0.5; B.y += ny*overlap*0.5; const imp=0.18; A.vx -= nx*imp; A.vy -= ny*imp; B.vx += nx*imp; B.vy += ny*imp; } } }
-    for(const b of blobs){ b.targetX = b.x; b.targetY = b.y; }
+    const physicsStart = performance.now();
+    
+    // SPATIAL OPTIMIZATION: обновляем spatial grid для быстрого поиска коллизий
+    spatialGrid.update(blobs);
+    
+    // 1. Обновляем физику движения для всех блопов
+    for(const b of blobs){ 
+      if(!b.isHovered && !b.isFrozen && b.visible){ 
+        b.vx *= 0.94; 
+        b.vy *= 0.94; 
+        b.vx += Math.sin((performance.now()/1000)+b.id*0.9) * IDLE_AMPLITUDE; 
+        b.vy += Math.cos((performance.now()/1000)+b.id*1.1) * IDLE_AMPLITUDE; 
+        b.x += b.vx; 
+        b.y += b.vy; 
+      } 
+      
+      // Границы экрана
+      const gap = 8; 
+      if(b.x - b.r < gap){ b.x = gap + b.r; b.vx *= -0.42; } 
+      if(b.x + b.r > W - gap){ b.x = W - gap - b.r; b.vx *= -0.42; } 
+      if(b.y - b.r < gap){ b.y = gap + b.r; b.vy *= -0.42; } 
+      if(b.y + b.r > H - gap){ b.y = H - gap - b.r; b.vy *= -0.42; } 
+    }
+    
+    // 2. SPATIAL OPTIMIZATION: коллизии через spatial hashing вместо O(n²)
+    const processedPairs = new Set();
+    
+    for(const A of blobs) {
+      if (!A.visible) continue;
+      
+      // Получаем только ближайшие блопы через spatial grid
+      const nearbyBlobs = spatialGrid.getNearbyBlobs(A);
+      
+      for(const B of nearbyBlobs) {
+        if (!B.visible || A === B) continue;
+        
+        // Избегаем дублирования пар (A,B) и (B,A)
+        const pairKey = A.id < B.id ? `${A.id}-${B.id}` : `${B.id}-${A.id}`;
+        if (processedPairs.has(pairKey)) continue;
+        processedPairs.add(pairKey);
+        
+        // Проверяем коллизию
+        const dx = B.x - A.x;
+        const dy = B.y - A.y;
+        const d = Math.hypot(dx, dy) || 0.0001;
+        const min = A.r + B.r + CENTER_GAP;
+        
+        if(d < min) {
+          const overlap = (min - d) * 0.6;
+          const nx = dx / d;
+          const ny = dy / d;
+          
+          A.x -= nx * overlap * 0.5;
+          A.y -= ny * overlap * 0.5;
+          B.x += nx * overlap * 0.5;
+          B.y += ny * overlap * 0.5;
+          
+          const imp = 0.18;
+          A.vx -= nx * imp;
+          A.vy -= ny * imp;
+          B.vx += nx * imp;
+          B.vy += ny * imp;
+        }
+      }
+    }
+    
+    // 3. Устанавливаем целевые позиции
+    for(const b of blobs){ 
+      b.targetX = b.x; 
+      b.targetY = b.y; 
+    }
+    
+    // DEBUG: логируем время выполнения физики
+    const physicsTime = performance.now() - physicsStart;
+    if(physicsTime > 5) {
+      console.warn(`🐌 Slow physics: ${physicsTime.toFixed(2)}ms`);
+    }
   }
 
   function updateDisplayPositions(){ for(const b of blobs){ b.dispX += (b.targetX - b.dispX) * DISPLAY_LERP; b.dispY += (b.targetY - b.dispY) * DISPLAY_LERP; } }
@@ -1187,3 +1470,320 @@ function pointInPolygon(x, y, pts){
   }
   return inside;
 }
+
+// =============================================================================
+// STAGE 5: СИСТЕМА МОНИТОРИНГА И АДАПТИВНОЙ ОПТИМИЗАЦИИ
+// =============================================================================
+
+class PerformanceMonitor {
+  constructor() {
+    this.frameRate = 60;
+    this.frameTimes = [];
+    this.performanceLevel = 'high'; // high, medium, low, critical
+    this.metrics = {
+      avgFrameTime: 0,
+      fps: 60,
+      memoryUsage: 0,
+      blobCount: 0,
+      renderTime: 0
+    };
+    
+    this.thresholds = {
+      excellent: 55, // Было 60
+      good: 35,      // Было 45
+      poor: 20,      // Было 30
+      critical: 10   // Было 15
+    };
+    
+    this.adaptiveSettings = {
+      high: {
+        recomputeInterval: 16, // 60fps
+        maxBlobs: 12,
+        morphingEnabled: true,
+        filtersEnabled: true,
+        shadowsEnabled: true
+      },
+      medium: {
+        recomputeInterval: 33, // 30fps
+        maxBlobs: 8,
+        morphingEnabled: true,
+        filtersEnabled: false,
+        shadowsEnabled: false
+      },
+      low: {
+        recomputeInterval: 50, // 20fps
+        maxBlobs: 5,
+        morphingEnabled: false,
+        filtersEnabled: false,
+        shadowsEnabled: false
+      }
+    };
+    
+    this.init();
+  }
+  
+  init() {
+    this.startFPSMonitoring();
+    
+    if (performance.memory) {
+      setInterval(() => this.checkMemoryUsage(), 5000);
+    }
+    
+    this.setupSlowFrameDetection();
+    this.startAdaptiveOptimization();
+  }
+  
+  startFPSMonitoring() {
+    let lastTime = performance.now();
+    
+    const measureFrame = (currentTime) => {
+      const frameTime = currentTime - lastTime;
+      lastTime = currentTime;
+      
+      this.frameTimes.push(frameTime);
+      
+      if (this.frameTimes.length > 60) {
+        this.frameTimes.shift();
+      }
+      
+      if (this.frameTimes.length % 30 === 0) {
+        this.updateMetrics();
+      }
+      
+      requestAnimationFrame(measureFrame);
+    };
+    
+    requestAnimationFrame(measureFrame);
+  }
+  
+  updateMetrics() {
+    if (this.frameTimes.length === 0) return;
+    
+    const avgFrameTime = this.frameTimes.reduce((a, b) => a + b, 0) / this.frameTimes.length;
+    this.metrics.avgFrameTime = avgFrameTime;
+    this.metrics.fps = Math.round(1000 / avgFrameTime);
+    
+    this.determinePerformanceLevel();
+    this.applyAdaptiveSettings();
+  }
+  
+  determinePerformanceLevel() {
+    const fps = this.metrics.fps;
+    
+    if (fps >= this.thresholds.excellent) {
+      this.performanceLevel = 'high';
+    } else if (fps >= this.thresholds.good) {
+      this.performanceLevel = 'medium';
+    } else if (fps >= this.thresholds.poor) {
+      this.performanceLevel = 'low';
+    } else {
+      this.performanceLevel = 'critical';
+    }
+  }
+  
+  applyAdaptiveSettings() {
+    const settings = this.adaptiveSettings[this.performanceLevel] || this.adaptiveSettings.low;
+    
+    // Обновляем CSS класс на body для визуальной индикации
+    document.body.className = document.body.className.replace(/performance-\w+/g, '');
+    if (this.performanceLevel !== 'high') {
+      document.body.classList.add(`performance-${this.performanceLevel}`);
+    }
+    
+    if (window.RECOMPUTE_INTERVAL !== settings.recomputeInterval) {
+      window.RECOMPUTE_INTERVAL = settings.recomputeInterval;
+      console.log(`🎛️ Performance mode: ${this.performanceLevel}, interval: ${settings.recomputeInterval}ms`);
+    }
+    
+    if (window.blobs && window.blobs.length > settings.maxBlobs) {
+      window.blobs = window.blobs.slice(0, settings.maxBlobs);
+    }
+    
+    window.morphingEnabled = settings.morphingEnabled;
+    this.toggleCSSFeatures(settings);
+  }
+  
+  toggleCSSFeatures(settings) {
+    const blobElements = document.querySelectorAll('.blob');
+    
+    blobElements.forEach(blob => {
+      if (!settings.filtersEnabled) {
+        blob.style.filter = 'none';
+      }
+      
+      if (!settings.shadowsEnabled) {
+        blob.style.boxShadow = 'none';
+      }
+      
+      if (this.performanceLevel === 'low' || this.performanceLevel === 'critical') {
+        blob.classList.add('low-performance-mode');
+      } else {
+        blob.classList.remove('low-performance-mode');
+      }
+    });
+  }
+  
+  setupSlowFrameDetection() {
+    let lastFrameTime = performance.now();
+    
+    const detectSlowFrame = (currentTime) => {
+      const frameTime = currentTime - lastFrameTime;
+      lastFrameTime = currentTime;
+      
+      if (frameTime > 50) { // Более мягкая детекция: меньше 20 FPS критично
+        this.handleSlowFrame(frameTime);
+      }
+      
+      requestAnimationFrame(detectSlowFrame);
+    };
+    
+    requestAnimationFrame(detectSlowFrame);
+  }
+  
+  handleSlowFrame(frameTime) {
+    console.warn(`🐌 Slow frame detected: ${frameTime.toFixed(2)}ms`);
+    
+    // Только очень медленные кадры (>150ms) активируют emergency режим
+    if (frameTime > 150) {
+      this.emergencyOptimization();
+    }
+  }
+  
+  emergencyOptimization() {
+    console.log('🚨 Emergency optimization activated');
+    
+    document.body.classList.add('emergency-optimization');
+    
+    setTimeout(() => {
+      document.body.classList.remove('emergency-optimization');
+    }, 1000);
+  }
+  
+  checkMemoryUsage() {
+    if (performance.memory) {
+      const memory = performance.memory;
+      this.metrics.memoryUsage = memory.usedJSHeapSize / memory.jsHeapSizeLimit;
+      
+      if (this.metrics.memoryUsage > 0.8) {
+        console.warn('🧠 High memory usage detected:', Math.round(this.metrics.memoryUsage * 100) + '%');
+        this.forceGarbageCollection();
+      }
+    }
+  }
+  
+  forceGarbageCollection() {
+    if (window.pathInterpolationCache && window.pathInterpolationCache.size > 100) {
+      window.pathInterpolationCache.clear();
+      console.log('🗑️ Path interpolation cache cleared');
+    }
+    
+    if (voronoiCache && voronoiCache.cache.size > 50) {
+      voronoiCache.clear();
+      console.log('🗑️ Voronoi cache cleared');
+    }
+    
+    if (spatialGrid) {
+      spatialGrid.clear();
+    }
+  }
+  
+  startAdaptiveOptimization() {
+    setInterval(() => {
+      this.adaptToDeviceCapabilities();
+    }, 2000);
+  }
+  
+  adaptToDeviceCapabilities() {
+    if (window.innerWidth <= 768) {
+      this.optimizeForMobile();
+    }
+    
+    if (navigator.getBattery) {
+      navigator.getBattery().then(battery => {
+        if (battery.level < 0.2) {
+          this.activatePowerSaveMode();
+        }
+      });
+    }
+    
+    if (navigator.connection && navigator.connection.effectiveType) {
+      const connection = navigator.connection.effectiveType;
+      if (connection === 'slow-2g' || connection === '2g') {
+        this.activateSlowConnectionMode();
+      }
+    }
+  }
+  
+  optimizeForMobile() {
+    if (window.blobs && window.blobs.length > 6) {
+      window.blobs = window.blobs.slice(0, 6);
+    }
+    
+    document.body.classList.add('mobile-optimized');
+  }
+  
+  activatePowerSaveMode() {
+    console.log('🔋 Power save mode activated');
+    this.performanceLevel = 'low';
+    this.applyAdaptiveSettings();
+  }
+  
+  activateSlowConnectionMode() {
+    console.log('🐌 Slow connection detected');
+    window.RECOMPUTE_INTERVAL = 100;
+  }
+  
+  getPerformanceReport() {
+    return {
+      ...this.metrics,
+      performanceLevel: this.performanceLevel,
+      deviceInfo: {
+        userAgent: navigator.userAgent,
+        memory: navigator.deviceMemory || 'unknown',
+        cores: navigator.hardwareConcurrency || 'unknown',
+        connection: navigator.connection?.effectiveType || 'unknown'
+      }
+    };
+  }
+  
+  shouldSkipFrame() {
+    return this.metrics.fps < this.thresholds.critical;
+  }
+  
+  shouldUseLowQuality() {
+    return this.performanceLevel === 'low' || this.performanceLevel === 'critical';
+  }
+  
+  getOptimalFrameInterval() {
+    return this.adaptiveSettings[this.performanceLevel]?.recomputeInterval || 50;
+  }
+}
+
+// ИНИЦИАЛИЗАЦИЯ СИСТЕМЫ МОНИТОРИНГА
+window.performanceMonitor = new PerformanceMonitor();
+
+// ИНТЕГРАЦИЯ С ОСНОВНЫМ ЦИКЛОМ
+const _originalRecomputeAndRender = window.recomputeAndRender;
+if (_originalRecomputeAndRender) {
+  window.recomputeAndRender = function() {
+    if (window.performanceMonitor.shouldSkipFrame()) {
+      return;
+    }
+    
+    const startTime = performance.now();
+    _originalRecomputeAndRender.call(this);
+    const renderTime = performance.now() - startTime;
+    
+    window.performanceMonitor.metrics.renderTime = renderTime;
+    
+    if (renderTime > 20) {
+      window.RECOMPUTE_INTERVAL = Math.min(window.RECOMPUTE_INTERVAL + 5, 100);
+    }
+  };
+}
+
+// ПУБЛИЧНЫЙ API ДЛЯ ДИАГНОСТИКИ
+window.getPerformanceReport = () => window.performanceMonitor.getPerformanceReport();
+
+console.log('🎯 Performance monitoring system activated');
+console.log('📊 Use getPerformanceReport() to see current metrics');

@@ -47,6 +47,12 @@ body, html {
 }
 #container.blurred { filter: blur(8px); }
 
+/* Блюр заднего фона при открытии overlay на всех устройствах включая мобильные */
+body.blurred #container { 
+  filter: blur(8px); 
+  transition: filter 300ms ease;
+}
+
 /* CONTAINER OPTIMIZATION: GPU acceleration для основного контейнера */
 #container {
   will-change: filter, transform;
@@ -544,7 +550,7 @@ h1, h2, h3, h4, h5, h6 {
   .footer-left .footer-bottom {
     /* Position absolutely at the bottom of the footer */
     position: absolute;
-    bottom: -5rem;
+    bottom: -8rem;
     left: 50%;
     transform: translateX(-50%);
     flex-direction: column;
@@ -830,6 +836,11 @@ foreignObject {
     display: none !important;
   }
 
+  /* Fix container height for mobile - account for two-row filterBar */
+  #container {
+    height: calc(100% - 90px); /* Increased from 60px to 90px for mobile */
+  }
+
   #contactsFooter {
     margin: 40px auto 20px;
     padding: 30px 0;
@@ -942,9 +953,14 @@ foreignObject {
     animation-duration: 0.15s !important;
   }
   
-  /* Отключаем дорогие эффекты на мобильных */
+  /* Отключаем дорогие эффекты на мобильных, но оставляем основной блюр */
   .overlay {
     backdrop-filter: none !important;
+  }
+  
+  /* Оставляем блюр контейнера активным для мобильных */
+  body.blurred #container {
+    filter: blur(4px) !important; /* Уменьшенный блюр на мобильных для производительности */
   }
   
   /* Ограничиваем количество одновременных анимаций */
@@ -977,4 +993,112 @@ foreignObject {
   video {
     animation-play-state: paused !important;
   }
+}
+
+/* =============================================================================
+   STAGE 5: PERFORMANCE MONITORING SYSTEM STYLES
+   ============================================================================= */
+
+/* Low performance mode optimizations */
+.low-performance-mode {
+  transition: none !important;
+  animation: none !important;
+  filter: none !important;
+  box-shadow: none !important;
+  transform: none !important;
+}
+
+/* Mobile optimizations */
+.mobile-optimized .blob {
+  will-change: auto;
+  backface-visibility: visible;
+}
+
+.mobile-optimized video {
+  opacity: 0.7;
+  filter: none !important;
+}
+
+/* Critical performance mode */
+.critical-performance .blob {
+  transition: none !important;
+  animation-play-state: paused !important;
+  transform: none !important;
+}
+
+.critical-performance video {
+  opacity: 0.5;
+  animation-play-state: paused !important;
+}
+
+/* Power save mode */
+.power-save-mode {
+  opacity: 0.8;
+}
+
+.power-save-mode .blob {
+  transition-duration: 0.5s !important;
+  animation-duration: 2s !important;
+}
+
+.power-save-mode video {
+  opacity: 0.6;
+  filter: grayscale(20%);
+}
+
+/* Slow connection mode */
+.slow-connection .blob {
+  transition-duration: 1s !important;
+  animation-iteration-count: 1 !important;
+}
+
+.slow-connection video {
+  opacity: 0.4;
+  filter: none !important;
+}
+
+/* Emergency optimization styles */
+.emergency-optimization * {
+  transition: none !important;
+  animation: none !important;
+  transform: none !important;
+  filter: none !important;
+  box-shadow: none !important;
+  will-change: auto !important;
+}
+
+/* Performance level indicators (for debugging) */
+body::before {
+  content: '';
+  position: fixed;
+  top: 10px;
+  right: 10px;
+  width: 10px;
+  height: 10px;
+  background: #00ff00;
+  border-radius: 50%;
+  z-index: 10000;
+  opacity: 0;
+  pointer-events: none;
+}
+
+body.performance-medium::before {
+  background: #ffff00;
+  opacity: 0.7;
+}
+
+body.performance-low::before {
+  background: #ff8800;
+  opacity: 0.7;
+}
+
+body.performance-critical::before {
+  background: #ff0000;
+  opacity: 1;
+  animation: blink 1s infinite;
+}
+
+@keyframes blink {
+  0%, 50% { opacity: 1; }
+  51%, 100% { opacity: 0.3; }
 }
