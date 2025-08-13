@@ -1,0 +1,192 @@
+/* ОПТИМИЗАЦИИ CSS для производительности блопов */
+
+/* 1. GPU acceleration для всех анимируемых элементов */
+.blob, .blob-outline, .ov-main-img, .ov-dots, .label {
+  will-change: transform, opacity;
+  backface-visibility: hidden;
+  transform: translateZ(0); /* Force GPU layer */
+  perspective: 1000px; /* Enable 3D rendering context */
+}
+
+/* 2. Оптимизированные transitions - используем только композитные свойства */
+.blob {
+  /* ПЛОХО: transition: all - вызывает reflow/repaint */
+  /* transition: all 0.2s ease; */
+  
+  /* ХОРОШО: только композитные свойства */
+  transition: 
+    transform 180ms cubic-bezier(0.4, 0, 0.2, 1),
+    opacity 200ms ease,
+    filter 200ms ease;
+}
+
+/* 3. Убираем избыточные transitions */
+/* БЫЛО: 
+path {
+  transition: all 0.2s cubic-bezier(0.1, 0, 0.1, 0.2);
+}
+clipPath path {
+  transition: all 0.2s cubic-bezier(0.1, 0, 0.1, 0.2);
+}
+УБИРАЕМ - paths обновляются через morphPath, не через CSS */
+
+/* 4. Оптимизация SVG рендеринга */
+svg {
+  shape-rendering: optimizeSpeed; /* Приоритет скорости над качеством */
+  text-rendering: optimizeLegibility;
+  /* УБИРАЕМ: transition для SVG корня не нужен */
+  contain: layout style paint; /* CSS containment для изоляции */
+}
+
+svg g {
+  transform: translateZ(0);
+  backface-visibility: hidden;
+  /* Используем contain для ограничения области перерисовки */
+  contain: layout style paint;
+  
+  /* Оптимизированный transition только для нужных свойств */
+  transition: 
+    transform 180ms cubic-bezier(0.4, 0, 0.2, 1),
+    opacity 200ms ease;
+  
+  /* УБИРАЕМ: will-change здесь избыточен */
+}
+
+/* 5. Оптимизация foreignObject */
+foreignObject {
+  /* БЫЛО: transition: all 0.2s cubic-bezier(0.1, 0, 0.1, 0.2); */
+  /* УБИРАЕМ - они управляются через JS */
+  contain: strict; /* Максимальная изоляция */
+}
+
+/* 6. Оптимизация видео элементов */
+video {
+  will-change: transform, opacity;
+  backface-visibility: hidden;
+  transform: translateZ(0);
+  /* Отключаем pointer-events на видео для лучшей производительности */
+  pointer-events: none;
+  /* Ускоряем рендеринг видео */
+  image-rendering: optimizeSpeed;
+}
+
+/* 7. Оптимизация hover состояний */
+.blob.hovered {
+  /* Используем только GPU-accelerated свойства */
+  transform: scale(1.05) translateZ(0);
+  transition: transform 200ms cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+/* 8. Debounce для filter анимаций */
+#filterBar input:focus,
+.cta-link:hover,
+.social-icons a:hover {
+  /* Сокращаем длительность анимаций для быстрого отклика */
+  animation: hue-spin 8s linear infinite; /* Было 12s */
+  transition: 
+    transform 100ms ease, /* Было 120ms */
+    box-shadow 120ms ease, /* Было 160ms */
+    opacity 100ms ease;
+}
+
+/* 9. Оптимизация label transitions */
+.label {
+  transition: opacity 150ms ease; /* Убираем лишние свойства */
+  contain: layout style; /* Ограничиваем влияние на layout */
+}
+
+/* 10. Оптимизация overlay transitions */
+.overlay {
+  transition: 
+    opacity 400ms cubic-bezier(0.4, 0, 0.2, 1), /* Было 0.5s ease */
+    visibility 400ms cubic-bezier(0.4, 0, 0.2, 1);
+  
+  /* Добавляем contain для изоляции */
+  contain: layout style paint;
+  
+  /* GPU acceleration */
+  will-change: opacity, visibility;
+  backface-visibility: hidden;
+}
+
+/* 11. Оптимизация mobile overlay slider */
+@media (max-width: 980px) {
+  .ov-main-img {
+    transition: opacity 0.3s ease;
+    will-change: opacity;
+    /* Убираем transform transitions на mobile для лучшей производительности */
+  }
+  
+  .ov-main {
+    /* Ограничиваем touch-action для лучшей производительности свайпов */
+    touch-action: pan-y pinch-zoom;
+    contain: layout style;
+  }
+}
+
+/* 12. Критические оптимизации для производительности */
+
+/* Отключаем transitions во время скролла */
+.scrolling * {
+  transition: none !important;
+  animation-play-state: paused !important;
+}
+
+/* Упрощенный рендеринг во время интенсивных операций */
+.low-performance-mode .blob {
+  filter: none !important;
+  box-shadow: none !important;
+  transition: none !important;
+}
+
+.low-performance-mode svg {
+  shape-rendering: crispEdges;
+}
+
+/* 13. Prefetch для критических ресурсов */
+.blob::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background: transparent;
+  pointer-events: none;
+  /* Предзагрузка GPU слоя */
+  transform: translateZ(0);
+  opacity: 0;
+}
+
+/* 14. Оптимизация для 120Hz дисплеев */
+@media (min-resolution: 120dpi) {
+  .blob, .label {
+    transition-duration: 0.08s; /* Половина от обычного для 120fps */
+  }
+}
+
+/* 15. Принудительное использование GPU для критических элементов */
+#svgRoot,
+#container,
+.overlay-content {
+  transform: translateZ(0);
+  will-change: transform;
+  contain: layout style paint;
+}
+
+/* 16. Оптимизация памяти - убираем will-change после анимаций */
+.blob:not(.hovered):not(.animating) {
+  will-change: auto; /* Освобождаем GPU память */
+}
+
+/* 17. Reduced motion для пользователей с ограниченными возможностями */
+@media (prefers-reduced-motion: reduce) {
+  * {
+    transition-duration: 0.1s !important;
+    animation-duration: 0.1s !important;
+  }
+  
+  .blob {
+    filter: none !important;
+  }
+}

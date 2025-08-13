@@ -429,7 +429,48 @@
     return mapped;
   }
 
-  function morphPath(el, newD, duration=MORPH_DURATION){ const old = el.getAttribute('d') || newD; if(old === newD) return; let interp; try{ interp = flubber.interpolate(old, newD, {maxSegmentLength:2}); }catch(e){ el.setAttribute('d', newD); return; } const start = performance.now(); function frame(t){ const p = Math.min(1,(t-start)/duration); el.setAttribute('d', interp(p)); if(p<1) requestAnimationFrame(frame); } requestAnimationFrame(frame); }
+  // OPTIMIZATION: кэш для интерполяций путей
+  const pathInterpolationCache = new Map();
+  
+  // VIDEO MASK OPTIMIZATION: кэширование видео трансформаций для синхронизации
+  let _lastVideoTransforms = [];
+  let _videoTransformUpdateFrame = 0;
+  
+  // DRAG OPTIMIZATION: throttling для плавного перетаскивания
+  let _lastDragUpdate = 0;
+  let _dragThrottleMs = 8; // ~120fps для плавного дрэга
+  
+  function morphPath(el, newD, duration=MORPH_DURATION){ 
+    const old = el.getAttribute('d') || newD; 
+    if(old === newD) return; 
+    
+    // Используем кэш для интерполяций
+    const cacheKey = `${old}_${newD}`;
+    let interp = pathInterpolationCache.get(cacheKey);
+    
+    if (!interp) {
+      try{ 
+        interp = flubber.interpolate(old, newD, {maxSegmentLength:2}); 
+        // Ограничиваем размер кэша до 50 элементов
+        if (pathInterpolationCache.size > 50) {
+          const firstKey = pathInterpolationCache.keys().next().value;
+          pathInterpolationCache.delete(firstKey);
+        }
+        pathInterpolationCache.set(cacheKey, interp);
+      } catch(e){ 
+        el.setAttribute('d', newD); 
+        return; 
+      }
+    }
+    
+    const start = performance.now(); 
+    function frame(t){ 
+      const p = Math.min(1,(t-start)/duration); 
+      el.setAttribute('d', interp(p)); 
+      if(p<1) requestAnimationFrame(frame); 
+    } 
+    requestAnimationFrame(frame); 
+  }
 
   function circlePathStr(cx,cy,r,segments=32){ const pts = []; for(let i=0;i<segments;i++){ const a = (i/segments)*Math.PI*2; pts.push([cx + Math.cos(a)*r, cy + Math.sin(a)*r]); } return polygonToPath(pts); }
 
@@ -546,8 +587,106 @@
 
   function updateVideoTransforms(){
     const infos = _lastVoronoiInfos || computeVoronoiPaths(true);
+    
+    // VIDEO MASK OPTIMIZATION: кэшируем трансформации для согласованности
     for(let i=0;i<blobs.length;i++){
-      const b = blobs[i]; if(!b.visible) continue; const info = infos[i]; const vid = b.localVideo; if(!vid) continue; let cx = b.dispX, cy = b.dispY, maxD = Math.max(32, b.r); if(info && info.pts && info.pts.length){ const cc = centroid(info.pts); cx = cc[0]; cy = cc[1]; maxD = Math.max(32, maxDistToCenter(info.pts, cc)); } const pad = VIDEO_PADDING; const side = Math.ceil(maxD*2 + pad*2); const desired = Math.max(32, side); const scale = Math.min(2, Math.max(0.6, W / (desired * 1.15))); const tx = Math.round(W/2 - cx); const ty = Math.round(H/2 - cy); const transform = `translate(${tx}px, ${ty}px) scale(${scale})`; if(b.frozenVideoTransform !== undefined && b.frozenVideoTransform !== null){ if(vid.style.transform !== b.frozenVideoTransform) vid.style.transform = b.frozenVideoTransform; } else { if(vid.style.transform !== transform) vid.style.transform = transform; } }
+      const b = blobs[i]; 
+      if(!b.visible) continue; 
+      const info = infos[i]; 
+      const vid = b.localVideo; 
+      if(!vid) continue; 
+      
+      let cx = b.dispX, cy = b.dispY, maxD = Math.max(32, b.r); 
+      
+      if(info && info.pts && info.pts.length){ 
+        const cc = centroid(info.pts); 
+        cx = cc[0]; 
+        cy = cc[1]; 
+        maxD = Math.max(32, maxDistToCenter(info.pts, cc)); 
+      } 
+      
+      const pad = VIDEO_PADDING; 
+      const side = Math.ceil(maxD*2 + pad*2); 
+      const desired = Math.max(32, side); 
+      const scale = Math.min(2, Math.max(0.6, W / (desired * 1.15))); 
+      const tx = Math.round(W/2 - cx); 
+      const ty = Math.round(H/2 - cy); 
+      const transform = `translate(${tx}px, ${ty}px) scale(${scale})`; 
+      
+      // Кэшируем трансформацию для данного фрейма
+      if (!_lastVideoTransforms[i]) _lastVideoTransforms[i] = '';
+      
+      if(b.frozenVideoTransform !== undefined && b.frozenVideoTransform !== null){ 
+        if(vid.style.transform !== b.frozenVideoTransform) {
+          vid.style.transform = b.frozenVideoTransform;
+          _lastVideoTransforms[i] = b.frozenVideoTransform;
+        }
+      } else { 
+        if(vid.style.transform !== transform) {
+          vid.style.transform = transform;
+          _lastVideoTransforms[i] = transform;
+        }
+      } 
+    }
+  }
+  
+  // VIDEO MASK OPTIMIZATION: интерполированное обновление видео между recompute
+  function updateVideoTransformsSmooth(){
+    for(let i=0;i<blobs.length;i++){
+      const b = blobs[i]; 
+      if(!b.visible) continue; 
+      const vid = b.localVideo; 
+      if(!vid) continue; 
+      
+      // Если есть frozen transform, не интерполируем
+      if(b.frozenVideoTransform !== undefined && b.frozenVideoTransform !== null) continue;
+      
+      // Используем текущие dispX/dispY для плавного следования за блопом
+      let cx = b.dispX, cy = b.dispY, maxD = Math.max(32, b.r);
+      
+      const pad = VIDEO_PADDING; 
+      const side = Math.ceil(maxD*2 + pad*2); 
+      const desired = Math.max(32, side); 
+      const scale = Math.min(2, Math.max(0.6, W / (desired * 1.15))); 
+      const tx = Math.round(W/2 - cx); 
+      const ty = Math.round(H/2 - cy); 
+      const smoothTransform = `translate(${tx}px, ${ty}px) scale(${scale})`; 
+      
+      // Применяем только если трансформация изменилась
+      if(vid.style.transform !== smoothTransform) {
+        vid.style.transform = smoothTransform;
+      }
+    }
+  }
+  
+  // DRAG OPTIMIZATION: синхронное обновление видео для перетаскиваемого блопа
+  function updateDraggedVideoTransform(draggedBlob) {
+    if (!draggedBlob || !draggedBlob.localVideo) return;
+    
+    const b = draggedBlob;
+    const lv = b.localVideo;
+    
+    if (mode === 'overview' && lv && lv.style.display !== 'none') {
+      // Используем реальные координаты без интерполяции для мгновенного отклика
+      const cx = b.x; // НЕ b.dispX - используем реальную позицию
+      const cy = b.y; // НЕ b.dispY - используем реальную позицию
+      const maxD = Math.max(32, b.r);
+      const pad = VIDEO_PADDING;
+      const side = Math.ceil(maxD * 2 + pad * 2);
+      const desired = Math.max(32, side);
+      const scale = Math.min(2, Math.max(0.6, W / (desired * 1.15)));
+      const tx = Math.round(W / 2 - cx);
+      const ty = Math.round(H / 2 - cy);
+      
+      const dragTransform = `translate(${tx}px, ${ty}px) scale(${scale})`;
+      
+      // Применяем transform без проверки на изменение для максимальной отзывчивости
+      lv.style.transform = dragTransform;
+      
+      // Кэшируем для последующего использования
+      if (!_lastVideoTransforms[blobs.indexOf(b)]) _lastVideoTransforms[blobs.indexOf(b)] = '';
+      _lastVideoTransforms[blobs.indexOf(b)] = dragTransform;
+    }
   }
 
   function physicsStep(){
@@ -766,6 +905,10 @@
       dragging = { b: best, ox: mx - best.dispX, oy: my - best.dispY, dragStarted: false, startX: mx, startY: my, draggingDisabled: !allowDragging };
       // Freeze the blob so its clip/outlines don't jitter
       best.isHovered = false; best.isFrozen = true; svg.appendChild(best.group); best._pointerDownTime = performance.now(); best._movedDuringDown = false;
+      
+      // DRAG OPTIMIZATION: добавляем CSS класс для отключения transitions
+      document.body.classList.add('dragging');
+      
       try{
         // compute an initial video transform for the blob so local video appears positioned correctly
         const infos = computeVoronoiPaths(true);
@@ -782,25 +925,81 @@
     }
   });
 
-  window.addEventListener('pointermove', (e)=>{ if(!dragging) return; if(dragging.draggingDisabled) return; const rect = svg.getBoundingClientRect(); const mx = e.clientX - rect.left, my = e.clientY - rect.top; const dx = mx - dragging.startX, dy = my - dragging.startY; if(!dragging.dragStarted && Math.hypot(dx,dy) > 6){ dragging.dragStarted = true; dragging.b._movedDuringDown = true; } dragging.b.targetX = mx - dragging.ox; dragging.b.targetY = my - dragging.oy; dragging.b.x = dragging.b.targetX; dragging.b.y = dragging.b.targetY; dragging.b.vx = 0; dragging.b.vy = 0; recomputeAndRender(false);
-    // while dragging, update local video transform so video follows the outline precisely
-    try{
-      const b = dragging.b; const lv = b.localVideo;
-      if(mode === 'overview' && lv && lv.style.display !== 'none'){
-        const cx = b.dispX; const cy = b.dispY; const maxD = Math.max(32, b.r); const pad = VIDEO_PADDING; const side = Math.ceil(maxD*2 + pad*2); const desired = Math.max(32, side); const scale = Math.min(2, Math.max(0.6, W / (desired * 1.15))); const tx = Math.round(W/2 - cx); const ty = Math.round(H/2 - cy);
-        lv.style.transform = `translate(${tx}px, ${ty}px) scale(${scale})`;
-      }
-    }catch(e){}
+  window.addEventListener('pointermove', (e)=>{ 
+    if(!dragging) return; 
+    if(dragging.draggingDisabled) return; 
+    
+    const now = performance.now();
+    
+    const rect = svg.getBoundingClientRect(); 
+    const mx = e.clientX - rect.left, my = e.clientY - rect.top; 
+    const dx = mx - dragging.startX, dy = my - dragging.startY; 
+    
+    if(!dragging.dragStarted && Math.hypot(dx,dy) > 6){ 
+      dragging.dragStarted = true; 
+      dragging.b._movedDuringDown = true; 
+    } 
+    
+    // DRAG OPTIMIZATION: обновляем позицию блопа немедленно
+    dragging.b.targetX = mx - dragging.ox; 
+    dragging.b.targetY = my - dragging.oy; 
+    dragging.b.x = dragging.b.targetX; 
+    dragging.b.y = dragging.b.targetY; 
+    dragging.b.vx = 0; 
+    dragging.b.vy = 0; 
+    
+    // DRAG OPTIMIZATION: мгновенно обновляем видео для синхронизации
+    updateDraggedVideoTransform(dragging.b);
+    
+    // DRAG OPTIMIZATION: throttling для recomputeAndRender
+    if (now - _lastDragUpdate >= _dragThrottleMs) {
+      recomputeAndRender(false);
+      _lastDragUpdate = now;
+    }
   });
-  window.addEventListener('pointerup', ()=>{ if(dragging){ const b = dragging.b; if(!dragging.dragStarted && b._pointerDownTime && (performance.now() - b._pointerDownTime) < 350){ const data = b.data; showDetail(data); }
+  window.addEventListener('pointerup', ()=>{ 
+    if(dragging){ 
+      const b = dragging.b; 
+      
+      // DRAG OPTIMIZATION: убираем CSS класс дрэга
+      document.body.classList.remove('dragging');
+      
+      if(!dragging.dragStarted && b._pointerDownTime && (performance.now() - b._pointerDownTime) < 350){ 
+        const data = b.data; 
+        showDetail(data); 
+      }
       // restore category group visibility if we hid it during drag
       try{ if(b._excludeFromCategoryClip){ delete b._excludeFromCategoryClip; recomputeAndRender(true); } }catch(e){}
       // hide and pause the local video used for dragging
       try{ const lv = b.localVideo; if(lv){ lv.style.display = 'none'; try{ lv.pause(); }catch(e){} lv.style.transform = ''; } }catch(e){}
-      b.frozenFO = null; b.frozenLabel = null; b.isFrozen = false; recomputeAndRender(false); } dragging = null; });
+      b.frozenFO = null; b.frozenLabel = null; b.isFrozen = false; recomputeAndRender(false); 
+    } 
+    dragging = null; 
+  });
 
   let last = performance.now(); let running = true; let frameCount = 0;
-  function loop(now){ const dt = now - last; last = now; if(running){ physicsStep(); updateDisplayPositions(); if(frameCount % 2 === 0) recomputeAndRender(false); updateVideoTransforms(); } frameCount++; requestAnimationFrame(loop); }
+  // OPTIMIZATION: уменьшаем частоту пересчета Voronoi с каждого 2-го на каждый 4-й фрейм
+  // VIDEO MASK OPTIMIZATION: исправлен порядок обновлений для синхронизации масок и видео
+  function loop(now){ 
+    const dt = now - last; 
+    last = now; 
+    
+    if(running){ 
+      physicsStep(); 
+      updateDisplayPositions(); 
+      
+      // Обновляем маски и видео синхронно
+      if(frameCount % 4 === 0) {
+        recomputeAndRender(false);
+        updateVideoTransforms(); // Полное обновление с Voronoi данными
+      } else {
+        updateVideoTransformsSmooth(); // Интерполированное обновление между recompute
+      }
+    } 
+    
+    frameCount++; 
+    requestAnimationFrame(loop); 
+  }
   requestAnimationFrame(loop);
 
   (function(){ const btn = document.getElementById('resetBtn'); if(btn){ btn.addEventListener('click', ()=>{ for(const b of blobs){ b.x = Math.random()*(W*0.8)+W*0.1; b.y = Math.random()*(H*0.5)+H*0.1; b.vx=b.vy=0; b.isHovered=false; b.isFrozen=false; b.targetX=b.x; b.targetY=b.y; b.dispX=b.x; b.dispY=b.y; b.frozenFO=null; b.frozenLabel=null; if(b.frozenVideoTransform !== undefined){ const v = b.fo.querySelector('video'); if(v) v.style.transition = ''; delete b.frozenVideoTransform; } b.visible=true; b.gridMode=false; } recomputeAndRender(true); }); } })();
