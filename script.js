@@ -19,9 +19,9 @@
   // --- data ---
   const ORIGINAL = [];
   const categories = [
-    { id: 'alpha', title: 'Project Alpha', src: 'https://www.w3schools.com/html/mov_bbb.mp4' },
-    { id: 'beta',  title: 'Project Beta',  src: 'https://interactive-examples.mdn.mozilla.net/media/cc0-videos/flower.mp4' },
-    { id: 'gamma', title: 'Project Gamma', src: 'https://www.w3schools.com/html/movie.mp4' }
+    { id: 'alpha', title: 'Project Alpha', src: 'https://videos.pexels.com/video-files/4508065/4508065-uhd_2560_1440_25fps.mp4' },
+    { id: 'beta',  title: 'Project Beta',  src: 'https://videos.pexels.com/video-files/16029681/16029681-uhd_2560_1440_30fps.mp4' },
+    { id: 'gamma', title: 'Project Gamma', src: 'https://videos.pexels.com/video-files/8333185/8333185-hd_1080_1080_30fps.mp4' }
   ];
 
   // Fallback image generator (guaranteed to work)

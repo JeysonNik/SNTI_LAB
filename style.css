@@ -263,8 +263,7 @@ foreignObject {
   backface-visibility: hidden;
   transform: translateZ(0);
   transition: 
-    opacity 0.2s cubic-bezier(0.1, 0, 0.1, 0.2),
-    transform 0.2s cubic-bezier(0.1, 0, 0.1, 0.2);
+    all 0.2s cubic-bezier(0.1, 0, 0.1, 0.2);
 }
 a:hover {box-shadow: 0 0 5px 1px white;}
 #contactsFooter {
