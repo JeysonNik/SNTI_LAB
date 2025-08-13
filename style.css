@@ -398,11 +398,13 @@ h1, h2, h3, h4, h5, h6 {
 /* Mobile responsiveness for footer */
 @media (max-width: 768px) {
   #contactsFooter {
-    grid-template-columns: 1fr;
+    display: flex;
+    flex-direction: column;
     gap: 3rem;
-    padding: 20px 0;
+    padding: 20px 0 6rem 0; /* Extra bottom padding for footer-bottom */
     height: auto;
     min-height: 30vh;
+    position: relative;
   }
   
   .footer-left h2 {
@@ -435,25 +437,77 @@ h1, h2, h3, h4, h5, h6 {
   .footer-right {
     padding-top: 1rem;
     justify-content: flex-start;
+    order: 2; /* footer-right comes after main content */
+    width: 100%;
+    display: flex;
+    flex-direction: column;
+    gap: 2rem;
   }
 
   /* Center contact form and make it 95% width */
   .contact-form-container {
     align-items: center;
+    order: 2; /* form comes second in footer-right */
+    width: 100%;
+  }
+  
+  .info-row {
+    order: 1; /* Location/Hours come first in footer-right */
+    width: 100%;
   }
   .contact-form {
     width: 95%;
     max-width: 95%;
   }
 
-  /* Footer bottom stacks on mobile */
+  /* Footer bottom stacks on mobile and goes to the very bottom */
   .footer-left .footer-bottom {
+    /* Position absolutely at the bottom of the footer */
+    position: absolute;
+    bottom: -5rem;
+    left: 50%;
+    transform: translateX(-50%);
     flex-direction: column;
     align-items: center;
     gap: 12px;
+    margin-top: 0;
+    width: 90%;
+  }
+  
+  /* Make footer-bottom appear after everything else */
+  #contactsFooter {
+    position: relative;
   }
   .footer-left .footer-bottom .social-icons {
     justify-content: center;
+  }
+  
+  /* Reorder footer elements on mobile */
+  .footer-left {
+    display: flex;
+    flex-direction: column;
+    order: 1; /* footer-left comes first */
+  }
+  
+  .footer-left h2 {
+    order: 1;
+  }
+  
+  .footer-left p {
+    order: 2;
+  }
+  
+  .cta-link {
+    order: 3;
+  }
+  
+  .footer-right {
+    order: 2; /* footer-right comes second */
+  }
+  
+  /* Move footer-bottom to appear AFTER footer-right */
+  .footer-left .footer-bottom {
+    order: 3; /* This will make it appear after footer-right due to flex container order */
   }
 }
 
@@ -487,6 +541,10 @@ h1, h2, h3, h4, h5, h6 {
   .footer-right {
     padding-top: 1rem;
     justify-content: flex-start;
+    width: 100%;
+    display: flex;
+    flex-direction: column;
+    gap: 1.5rem;
   }
 
   .contact-form {
@@ -687,7 +745,10 @@ foreignObject {
   }
   
   .footer-right {
-    grid-template-columns: 1fr;
+    width: 100%;
+    display: flex;
+    flex-direction: column;
+    gap: 2rem;
   }
 
   /* Make Location and Hours horizontal on mobile */
