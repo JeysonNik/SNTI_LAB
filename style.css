@@ -52,28 +52,46 @@ body.blurred #container {
   filter: blur(8px);
 }
 
-/* SMOOTH MORPHING: CSS поддержка для плавных переходов SVG */
-.blob-group path {
-  /* Готовность к CSS transitions для быстрых морфингов */
-  will-change: auto; /* Изменено с 'd' для предотвращения подергиваний */
+/* SIMPLIFIED MORPHING: Простая CSS поддержка как в рабочем файле */
+.blob-group {
+  /* Плавные переходы для движения групп */
+  transition: transform 0.1s ease-out, opacity 0.2s ease;
+  will-change: transform, opacity;
 }
 
 .blob-group video, .blob-group img {
-  /* ANTI-JITTER: Осторожные переходы для медиа контента */
-  transition-property: opacity; /* Убираем transform из transitions */
-  transition-timing-function: ease-out;
-  will-change: auto; /* Изменено для предотвращения конфликтов */
+  /* Простые переходы только для opacity */
+  transition: opacity 300ms ease, transform 0.05s ease-out;
+  will-change: auto;
 }
 
-/* Оптимизация для GPU при перетаскивании */
+.blob-group path {
+  /* Плавные переходы для SVG paths */
+  transition: d 0.1s ease-out;
+  will-change: auto;
+}
+
+/* Оптимизация GPU только при перетаскивании */
+body.dragging .blob-group,
 body.dragging .blob-group path,
 body.dragging .blob-group video,
 body.dragging .blob-group img {
   will-change: transform;
   transform: translateZ(0);
   backface-visibility: hidden;
-  /* ANTI-JITTER: Отключаем transitions при перетаскивании */
+  /* Отключаем transitions при перетаскивании для мгновенного отклика */
   transition: none !important;
+}
+
+/* Отключение transitions для отдельного перетаскиваемого блоба */
+.blob-group.dragging,
+.blob-group.dragging path,
+.blob-group.dragging video,
+.blob-group.dragging img {
+  transition: none !important;
+  will-change: transform;
+  transform: translateZ(0);
+  backface-visibility: hidden;
 }
 
 /* CONTAINER OPTIMIZATION: GPU acceleration для основного контейнера */

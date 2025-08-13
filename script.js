@@ -128,13 +128,13 @@
   const INSET_GAP = 8;
 
   // CHAIKIN_ITERS: количество итераций сглаживания (Чайкин). Больше итераций -> более плавный, но более дорогой по CPU контур.
-  const CHAIKIN_ITERS = 5; // уменьшаем с 10 до 5 как в рабочем примере
+  const CHAIKIN_ITERS = 5; // оптимальное значение из рабочего файла
 
   // RESAMPLE_POINTS / RESAMPLE_FINAL: размеры выборки точек для промежуточной ресемплизации.
   // RESAMPLE_POINTS влияет на качество промежуточного сглаживания, RESAMPLE_FINAL — на детализацию итогового path.
-  // Уменьшаем значения для соответствия рабочему примеру и улучшения морфинга
-  const RESAMPLE_POINTS = 64; // уменьшаем с 192 до 64 как в рабочем примере
-  const RESAMPLE_FINAL = 128;  // уменьшаем с 320 до 128 для стабильности
+  // Значения из рабочего файла для правильного морфинга
+  const RESAMPLE_POINTS = 64; // оптимально из рабочего файла
+  const RESAMPLE_FINAL = 128; // оптимально из рабочего файла
 
   // VIDEO_PADDING: дополнительный отступ вокруг вычисленной области для видео внутри блопа.
   // Влияет на масштаб и кроп видео внутри клетки.
@@ -142,8 +142,8 @@
 
   // DEFAULT_IDLE_AMPLITUDE: базовая амплитуда «шевеления» блопов в режиме overview.
   // IDLE_AMPLITUDE — текущее значение, которое скрипт может менять во время фильтрации.
-  // Увеличение -> более заметное плавание; уменьшение -> более статичная сцена.
-  const DEFAULT_IDLE_AMPLITUDE = 0.02;
+  // Уменьшаем в 4 раза для более спокойного движения
+  const DEFAULT_IDLE_AMPLITUDE = 0.005; // было 0.02
   let IDLE_AMPLITUDE = DEFAULT_IDLE_AMPLITUDE;
 
   // CENTER_GAP: минимальный суммарный отступ/защитная дистанция при разрешении пересечений центров.
@@ -152,21 +152,21 @@
 
   // RECOMPUTE_INTERVAL: минимальный интервал (ms) между пересчётами Voronoi/рендером — влияет на производительность.
   // Увеличьте, если хотите снизить нагрузку CPU, но учтите ухудшение плавности анимаций.
-  let RECOMPUTE_INTERVAL = 5; // уменьшить с 10 до 5 для более частого обновления
+  let RECOMPUTE_INTERVAL = 40; // стабильный ритм пересчёта Voronoi (~25fps) как в референсе
   window.RECOMPUTE_INTERVAL = RECOMPUTE_INTERVAL; // Глобальная ссылка для мониторинга
 
   // DISPLAY_LERP: коэффициент сглаживания движения отображаемых позиций (dispX/dispY).
-  // Меньше значение -> более плавное, но более медленное следование цели; больше -> более резкое движение.
-  let DISPLAY_LERP = 0.1;     // smoothing of displayed centers
+  // Уменьшаем для более плавной интерполяции
+  let DISPLAY_LERP = 0.05;     // было 0.1, теперь более плавно
 
   // MORPH_DURATION: стандартная длительность морфинга path'ов (ms). При фильтрации временно увеличивается.
-  // Уменьшаем до значений из рабочего примера для более быстрого морфинга
-  let MORPH_DURATION = 300;    // уменьшаем с 900 до 300 как в рабочем примере
+  // Увеличение сделает переходы более медленными/кинетичными; уменьшение — более snappy.
+  let MORPH_DURATION = 300;    // оптимальное значение из рабочего файла
   
-  // SMOOTH MORPHING: настройки для плавного морфинга во время движения
-  const MOVEMENT_MORPH_DURATION = 150;  // Быстрый морфинг для движения
-  const DRAG_MORPH_DURATION = 100;      // Еще быстрее для перетаскивания
-  const VIDEO_MORPH_DURATION = 200;     // Синхронизация видео с контурами
+  // ПРОСТЫЕ КОНСТАНТЫ МОРФИНГА: убираем сложность, используем базовые значения
+  const MOVEMENT_MORPH_DURATION = 300;  // Стандартный морфинг для движения
+  const DRAG_MORPH_DURATION = 300;      // Стандартный морфинг для перетаскивания
+  const VIDEO_MORPH_DURATION = 300;     // Стандартный морфинг для видео
 
   // pending timeouts used to prevent racing transitions
   let _pendingTimeouts = [];
@@ -181,9 +181,10 @@
     const x = Math.random()*(W*0.8)+W*0.1;
     const y = Math.random()*(H*0.5)+H*0.1;
     const data = ORIGINAL[i]; const cat = data ? data.category : categories[i % categories.length].id; const imgSrc = (data && data.imgs && data.imgs[0]) || ''; 
+    const r0 = Math.random()*(MAX_R-MIN_R)+MIN_R;
     blobs.push({
       id:i, x, y, vx:(Math.random()-0.5)*0.9, vy:(Math.random()-0.5)*0.9,
-      r: Math.random()*(MAX_R-MIN_R)+MIN_R,
+      r: r0,
       density: randDensity(), videoIndex:i%VIDEO_SOURCES.length,
       category: cat, imageSrc: imgSrc, data: data || null,
       clipPathEl:null, pathEl:null, fo:null, group:null, outline:null, label:null,
@@ -192,7 +193,9 @@
       isHovered:false, isFrozen:false, hoverExpanded:0,
       frozenFO: null, frozenLabel: null, frozenVideoTransform: undefined,
       frozenPath: null,
-      visible:true, gridMode:false
+      visible:true, gridMode:false,
+      // base state for hard reset
+      baseX: x, baseY: y, baseR: r0
     });
   }
 
@@ -290,7 +293,7 @@
     group.style.transform = 'scale(1)';
     // NEW: убираем блюр с блопов
     // group.style.filter = 'url(#blob-blur)'; // удаляем эту строку
-    group.classList.add('blob');
+    group.classList.add('blob', 'blob-group');
 
     const fo = document.createElementNS('http://www.w3.org/2000/svg','foreignObject');
     fo.setAttribute('x', 0); fo.setAttribute('y', 0); fo.setAttribute('width', W); fo.setAttribute('height', H);
@@ -633,17 +636,18 @@
   
   const voronoiCache = new VoronoiCache();
   
+  // SIMPLE MORPHING: Простая и рабочая логика из приложенного файла
   function morphPath(el, newD, duration=MORPH_DURATION){ 
     const old = el.getAttribute('d') || newD; 
     if(old === newD) return; 
     
-    let interp;
+    let interp; 
     try{ 
       interp = flubber.interpolate(old, newD, {maxSegmentLength:2}); 
     } catch(e){ 
       el.setAttribute('d', newD); 
       return; 
-    }
+    } 
     
     const start = performance.now(); 
     function frame(t){ 
@@ -654,43 +658,7 @@
     requestAnimationFrame(frame); 
   }
 
-  // SMOOTH MORPHING: Упрощенная функция морфинга как в рабочем примере
-  function smartMorphPath(el, newD, blob, isForced = false) {
-    // Проверяем, нужно ли изменение
-    const currentD = el.getAttribute('d') || '';
-    if (currentD === newD) return;
-    
-    // Используем простой морфинг с адаптивной длительностью
-    let duration = MORPH_DURATION;
-    
-    if (dragging && dragging.b === blob) {
-      // При перетаскивании - быстрее
-      duration = 100;
-    } else if (blob.vx * blob.vx + blob.vy * blob.vy > 0.01) {
-      // При движении - быстрее
-      duration = 150;
-    } else if (isForced) {
-      // Для принудительных обновлений - мгновенно
-      el.setAttribute('d', newD);
-      return;
-    }
-    
-    // Используем стандартный морфинг
-    morphPath(el, newD, duration);
-  }
-
-  // SMOOTH MORPHING: Упрощенный морфинг для видео
-  function smoothMorphVideo(blob, newTransform) {
-    const video = blob.localVideo;
-    if (!video) return;
-    
-    // Проверяем, действительно ли нужно изменение
-    if (video.style.transform === newTransform) return;
-    
-    // Простое мгновенное применение для стабильности
-    video.style.transform = newTransform;
-  }
-
+  // SMOOTH MORPHING: Улучшенная функция морфинга с адаптивной длительностью
   function circlePathStr(cx,cy,r,segments=32){ const pts = []; for(let i=0;i<segments;i++){ const a = (i/segments)*Math.PI*2; pts.push([cx + Math.cos(a)*r, cy + Math.sin(a)*r]); } return polygonToPath(pts); }
 
   let lastCompute = 0;
@@ -757,9 +725,10 @@
       
       if(info && info.path){
         if(forceImmediate){
+          // Мгновенное применение без анимации  
           try{ b.clipPathEl.setAttribute('d', info.path); b.pathEl.setAttribute('d', info.path); }catch(e){}
         } else {
-          // Используем простой морфинг как в рабочем примере
+          // Стандартный морфинг как в рабочем файле
           morphPath(b.clipPathEl, info.path, MORPH_DURATION);
           morphPath(b.pathEl, info.path, MORPH_DURATION);
         }
@@ -884,11 +853,13 @@
       
       if(b.frozenVideoTransform !== undefined && b.frozenVideoTransform !== null){ 
         if(vid.style.transform !== b.frozenVideoTransform) {
+          // Простое применение без сложных transitions
           vid.style.transform = b.frozenVideoTransform;
           _lastVideoTransforms[i] = b.frozenVideoTransform;
         }
       } else { 
         if(vid.style.transform !== transform) {
+          // Простое применение без сложных transitions
           vid.style.transform = transform;
           _lastVideoTransforms[i] = transform;
         }
@@ -926,9 +897,10 @@
       const ty = Math.round(H/2 - cy); 
       const smoothTransform = `translate(${tx}px, ${ty}px) scale(${scale})`; 
       
-      // Простое применение без transitions
+      // ANTI-JITTER: Применяем только если трансформация значительно изменилась
       const currentTransform = vid.style.transform || '';
       if(currentTransform !== smoothTransform) {
+        // Простое применение как в рабочем файле
         vid.style.transform = smoothTransform;
       }
     }
@@ -944,7 +916,7 @@
     if (mode === 'overview' && lv && lv.style.display !== 'none') {
       // ВАЖНО: Используем замороженную трансформацию для стабильности видео
       if (b.frozenVideoTransform) {
-        // Применяем зафиксированную в начале перетаскивания трансформацию
+        // Простое применение зафиксированной трансформации
         if (lv.style.transform !== b.frozenVideoTransform) {
           lv.style.transform = b.frozenVideoTransform;
         }
@@ -968,10 +940,16 @@
     // 1. Обновляем физику движения для всех блопов
     for(const b of blobs){ 
       if(!b.isHovered && !b.isFrozen && b.visible){ 
-        b.vx *= 0.94; 
-        b.vy *= 0.94; 
-        b.vx += Math.sin((performance.now()/1000)+b.id*0.9) * IDLE_AMPLITUDE; 
-        b.vy += Math.cos((performance.now()/1000)+b.id*1.1) * IDLE_AMPLITUDE; 
+        // более мягкое затухание и более низкая частота шумов
+        b.vx *= 0.92; 
+        b.vy *= 0.92; 
+        const t = performance.now()/1200; // сниженная частота колебаний
+        b.vx += Math.sin(t + b.id*0.9) * IDLE_AMPLITUDE; 
+        b.vy += Math.cos(t + b.id*1.1) * IDLE_AMPLITUDE; 
+        // ограничение максимальной скорости для предотвращения резких рывков
+        const maxV = 1.2;
+        if (b.vx > maxV) b.vx = maxV; else if (b.vx < -maxV) b.vx = -maxV;
+        if (b.vy > maxV) b.vy = maxV; else if (b.vy < -maxV) b.vy = -maxV;
         b.x += b.vx; 
         b.y += b.vy; 
       } 
@@ -1108,8 +1086,9 @@
           const infosNow = _lastVoronoiInfos || computeVoronoiPaths(true);
           const info = infosNow[hovered.id];
           if(info && info.path) {
-            morphPath(hovered.clipPathEl, info.path, 300);
-            morphPath(hovered.pathEl, info.path, 300);
+            // Простой морфинг как в рабочем файле
+            morphPath(hovered.clipPathEl, info.path, HOVER_MORPH_DURATION);
+            morphPath(hovered.pathEl, info.path, HOVER_MORPH_DURATION);
           }
         } catch(err){}
         hovered.frozenVideoTransform = null; 
@@ -1137,8 +1116,9 @@
         const infosNow = _lastVoronoiInfos || computeVoronoiPaths(true); 
         const infoForHover = infosNow[hovered.id]; 
         if(infoForHover){ 
-          morphPath(hovered.clipPathEl, infoForHover.path, 300);
-          morphPath(hovered.pathEl, infoForHover.path, 300);
+          // Простой морфинг как в рабочем файле
+          morphPath(hovered.clipPathEl, infoForHover.path, HOVER_MORPH_DURATION);
+          morphPath(hovered.pathEl, infoForHover.path, HOVER_MORPH_DURATION);
           hovered.frozenPath = infoForHover.path;
           
           const c = centroid(infoForHover.pts); 
@@ -1262,6 +1242,9 @@
       // Freeze the blob so its clip/outlines don't jitter
       best.isHovered = false; best.isFrozen = true; svg.appendChild(best.group); best._pointerDownTime = performance.now(); best._movedDuringDown = false;
       
+      // Отключаем CSS transitions для мгновенного отклика при перетаскивании
+      best.group.classList.add('dragging');
+      
       // DRAG OPTIMIZATION: добавляем CSS класс для отключения transitions
       document.body.classList.add('dragging');
       
@@ -1281,12 +1264,9 @@
     }
   });
 
-  // TOUCH OPTIMIZATION: passive: false для drag move - нужен preventDefault
   window.addEventListener('pointermove', (e)=>{ 
     if(!dragging) return; 
     if(dragging.draggingDisabled) return; 
-    
-    const now = performance.now();
     
     const rect = svg.getBoundingClientRect(); 
     const mx = e.clientX - rect.left, my = e.clientY - rect.top; 
@@ -1297,7 +1277,7 @@
       dragging.b._movedDuringDown = true; 
     } 
     
-    // DRAG OPTIMIZATION: обновляем позицию блопа немедленно
+    // Простое обновление позиции как в рабочем файле
     dragging.b.targetX = mx - dragging.ox; 
     dragging.b.targetY = my - dragging.oy; 
     dragging.b.x = dragging.b.targetX; 
@@ -1305,15 +1285,21 @@
     dragging.b.vx = 0; 
     dragging.b.vy = 0; 
     
-    // DRAG OPTIMIZATION: мгновенно обновляем видео для синхронизации
-    updateDraggedVideoTransform(dragging.b);
+    // Перерасчет геометрии
+    recomputeAndRender(false);
     
-    // DRAG OPTIMIZATION: throttling для recomputeAndRender
-    if (now - _lastDragUpdate >= _dragThrottleMs) {
-      recomputeAndRender(false);
-      _lastDragUpdate = now;
-    }
-  }, { passive: false }); // TOUCH OPTIMIZATION: passive: false для drag - нужен preventDefault
+    // Обновление видео из приложенного файла
+    try{
+      const b = dragging.b; const lv = b.localVideo;
+      if(mode === 'overview' && lv && lv.style.display !== 'none'){
+        const cx = b.dispX; const cy = b.dispY; const maxD = Math.max(32, b.r); 
+        const pad = VIDEO_PADDING; const side = Math.ceil(maxD*2 + pad*2); 
+        const desired = Math.max(32, side); const scale = Math.min(2, Math.max(0.6, W / (desired * 1.15))); 
+        const tx = Math.round(W/2 - cx); const ty = Math.round(H/2 - cy);
+        lv.style.transform = `translate(${tx}px, ${ty}px) scale(${scale})`;
+      }
+    }catch(e){}
+  });
   
   // TOUCH OPTIMIZATION: passive listener для pointerup
   window.addEventListener('pointerup', ()=>{ 
@@ -1335,6 +1321,9 @@
       if(b.frozenVideoTransform) delete b.frozenVideoTransform;
       if(b._dragVideoTransform) delete b._dragVideoTransform;
       b.frozenFO = null; b.frozenLabel = null; b.isFrozen = false; recomputeAndRender(false); 
+      
+      // Включаем обратно CSS transitions для плавности движения
+      b.group.classList.remove('dragging');
     } 
     dragging = null; 
   }, { passive: true }); // TOUCH OPTIMIZATION: passive listener для pointerup
@@ -1347,21 +1336,15 @@
     last = now; 
     
     if(running){ 
+      // один шаг физики и одно сглаживание позиций
       physicsStep(); 
       updateDisplayPositions(); 
       
-      // SMOOTH ANIMATION: recompute каждый кадр для плавности, но video только каждые 4 кадра
-      recomputeAndRender(false);
+      // стабильный пересчёт геометрии по таймеру
+      recomputeAndRender(false); 
       
-      // ANTI-JITTER: Оптимизированное обновление видео для устранения подергиваний
-      if(frameCount % 6 === 0) {
-        // Менее частое полное обновление для стабильности
-        updateVideoTransforms(); // Полное обновление с Voronoi данными
-      } else if(frameCount % 2 === 0) {
-        // Интерполированное обновление каждый второй кадр
-        updateVideoTransformsSmooth(); // Интерполированное обновление между recompute
-      }
-      // В остальных кадрах видео не обновляется для предотвращения микроподергиваний
+      // более плавное обновление трансформаций видео
+      updateVideoTransformsSmooth();
     } 
     
     frameCount++; 
@@ -1421,31 +1404,7 @@
     const birthMs = 520;
 
   if(!key || key === 'all'){
-      // reset to overview
-      running = true;
-      allowDragging = true;
-      IDLE_AMPLITUDE = DEFAULT_IDLE_AMPLITUDE;
-      setActiveFilter('all');
-
-      for(const b of blobs){
-        b.visible = true;
-        b.group.style.display = '';
-        b.group.style.transition = `opacity ${hideMs}ms ease`;
-        // Keep opaque on mobile, semi-transparent otherwise
-        b.group.style.opacity = isMobile() ? '1' : '0.5';
-        b.isFrozen = false;
-        b.frozenPath = null;
-        b.frozenVideoTransform = null;
-      }
-      // remove per-blob images
-      for(const b of blobs){
-        const img = b.fo.querySelector('img.blob-image');
-        if(img) img.remove();
-      }
-      // show category videos
-      enterOverviewMode();
-
-      setTimeout(()=>{ recomputeAndRender(true); MORPH_DURATION = 300; }, 80);
+      hardResetToOverview();
       return;
     }
 
@@ -1513,6 +1472,55 @@
 
     // switch to filtered mode visuals
     enterFilteredMode(matches);
+  }
+
+  // Полный сброс состояния к состоянию «как после загрузки»
+  function hardResetToOverview(){
+    clearPending();
+    running = true;
+    allowDragging = true;
+    IDLE_AMPLITUDE = DEFAULT_IDLE_AMPLITUDE;
+    MORPH_DURATION = 300;
+    setActiveFilter('all');
+
+    // Сброс глобальных кэшей и статусов
+    _lastVoronoiInfos = null;
+    if (typeof hovered !== 'undefined' && hovered) hovered = null;
+    if (typeof dragging !== 'undefined' && dragging) dragging = null;
+    if (typeof _lastVideoTransforms !== 'undefined') _lastVideoTransforms = [];
+
+    // Спрятать пер-блоб изображения и вернуть видео к исходному виду
+    for(const b of blobs){
+      const img = b.fo && b.fo.querySelector && b.fo.querySelector('img.blob-image');
+      if(img) img.remove();
+      const lv = b.localVideo;
+      if(lv){ try{ lv.pause(); }catch(e){} lv.style.display = 'none'; lv.style.transform = ''; }
+    }
+
+    // Вернуть все базовые параметры блобов (позиции/радиусы/флаги/opacity)
+    for(const b of blobs){
+      b.x = b.baseX; b.y = b.baseY; b.r = b.baseR; b.vx = 0; b.vy = 0;
+      b.targetX = b.baseX; b.targetY = b.baseY; b.dispX = b.baseX; b.dispY = b.baseY;
+      b.isHovered = false; b.isFrozen = false; b.hoverExpanded = 0;
+      b.frozenFO = null; b.frozenLabel = null; b.frozenPath = null; b.frozenVideoTransform = null;
+      b._excludeFromCategoryClip = false;
+      b.visible = true; b.gridMode = false;
+      if (b.clipPathEl) b.clipPathEl.setAttribute('d','');
+      if (b.pathEl) b.pathEl.setAttribute('d','');
+      if (b.group){
+        b.group.style.display = '';
+        b.group.style.transform = 'scale(1)';
+        b.group.style.opacity = isMobile() ? '1' : '0.5';
+        b.group.classList.remove('dragging');
+      }
+      if (b.label){ b.label.setAttribute('opacity','0'); }
+    }
+
+    // Показать категорийные видео и восстановить клипы
+    enterOverviewMode();
+
+    // Мгновенная геометрия, затем обычный цикл
+    recomputeAndRender(true);
   }
 
   // Expose API for ui.js
