@@ -714,7 +714,15 @@
     }
   }
 
-  svg.addEventListener('pointermove', (e)=>{ 
+  // TOUCH OPTIMIZATION: throttling для hover событий
+  let _lastHoverUpdate = 0;
+  let _hoverThrottleMs = 16; // ~60fps для hover
+  
+  function throttledHoverHandler(e) {
+    const now = performance.now();
+    if (now - _lastHoverUpdate < _hoverThrottleMs) return;
+    _lastHoverUpdate = now;
+    
     if(dragging) return; 
     const rect = svg.getBoundingClientRect(); 
     const mx = e.clientX - rect.left, my = e.clientY - rect.top; 
@@ -851,7 +859,10 @@
       updateBackgroundBlur();
       recomputeAndRender(false); 
     } 
-  });
+  }
+
+  // TOUCH OPTIMIZATION: добавляем throttled обработчик с passive listener
+  svg.addEventListener('pointermove', throttledHoverHandler, { passive: true });
 
   svg.addEventListener('pointerleave', ()=>{ 
     if(hovered){ 
@@ -867,10 +878,11 @@
       updateBackgroundBlur();
       recomputeAndRender(false);
     } 
-  });
+  }, { passive: true }); // TOUCH OPTIMIZATION: passive listener
 
   let dragging = null;
   let allowDragging = true;
+  // TOUCH OPTIMIZATION: passive: false для pointerdown - нужен preventDefault
   svg.addEventListener('pointerdown', (e)=>{
     const rect = svg.getBoundingClientRect();
     const mx = e.clientX - rect.left, my = e.clientY - rect.top;
@@ -925,6 +937,7 @@
     }
   });
 
+  // TOUCH OPTIMIZATION: passive: false для drag move - нужен preventDefault
   window.addEventListener('pointermove', (e)=>{ 
     if(!dragging) return; 
     if(dragging.draggingDisabled) return; 
@@ -956,7 +969,9 @@
       recomputeAndRender(false);
       _lastDragUpdate = now;
     }
-  });
+  }, { passive: false }); // TOUCH OPTIMIZATION: passive: false для drag - нужен preventDefault
+  
+  // TOUCH OPTIMIZATION: passive listener для pointerup
   window.addEventListener('pointerup', ()=>{ 
     if(dragging){ 
       const b = dragging.b; 
@@ -975,7 +990,7 @@
       b.frozenFO = null; b.frozenLabel = null; b.isFrozen = false; recomputeAndRender(false); 
     } 
     dragging = null; 
-  });
+  }, { passive: true }); // TOUCH OPTIMIZATION: passive listener для pointerup
 
   let last = performance.now(); let running = true; let frameCount = 0;
   // OPTIMIZATION: уменьшаем частоту пересчета Voronoi с каждого 2-го на каждый 4-й фрейм

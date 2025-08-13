@@ -24,6 +24,10 @@
     if (!el) return;
     let activeId = null;
     let lastX = 0, lastY = 0;
+    
+    // TOUCH OPTIMIZATION: throttling для touchmove
+    let lastTouchMove = 0;
+    const touchMoveThrottle = 8; // ~120fps для touch
 
     el.addEventListener('touchstart', (e) => {
       if (activeId !== null) return; // ignore multi-touch
@@ -36,6 +40,12 @@
 
     el.addEventListener('touchmove', (e) => {
       if (activeId === null) return;
+      
+      // TOUCH OPTIMIZATION: throttling для производительности
+      const now = performance.now();
+      if (now - lastTouchMove < touchMoveThrottle) return;
+      lastTouchMove = now;
+      
       // Find the active touch by id
       let t = null;
       for (let i = 0; i < e.changedTouches.length; i++) {

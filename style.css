@@ -40,8 +40,21 @@ body, html {
   background: #111; 
   font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
   transition: filter 0.5s ease; 
+  /* GPU OPTIMIZATION: базовое ускорение для body */
+  will-change: auto;
+  transform: translateZ(0);
+  backface-visibility: hidden;
 }
 #container.blurred { filter: blur(8px); }
+
+/* CONTAINER OPTIMIZATION: GPU acceleration для основного контейнера */
+#container {
+  will-change: filter, transform;
+  transform: translateZ(0);
+  backface-visibility: hidden;
+  contain: layout style paint;
+}
+
 #brandBg {
   position: absolute;
   margin-top:5px;
@@ -172,9 +185,37 @@ svg { width:100%; height:100%; display:block; }
   font-family: 'Inter', sans-serif;
   font-weight: 600;
 }
-.overlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); backdrop-filter: blur(8px); opacity: 0; visibility: hidden; transition: opacity 0.5s ease, visibility 0.5s ease; z-index: 999; display: flex; justify-content: center; align-items: center; }
+.overlay { 
+  position: fixed; 
+  top: 0; left: 0; 
+  width: 100%; height: 100%; 
+  background: rgba(0,0,0,0.5); 
+  backdrop-filter: blur(8px); 
+  opacity: 0; 
+  visibility: hidden; 
+  transition: opacity 0.5s ease, visibility 0.5s ease; 
+  z-index: 999; 
+  display: flex; 
+  justify-content: center; 
+  align-items: center;
+  /* OVERLAY OPTIMIZATION: GPU acceleration */
+  will-change: opacity, visibility;
+  transform: translateZ(0);
+  backface-visibility: hidden;
+  contain: layout style paint;
+}
 .overlay.visible { opacity: 1; visibility: visible; }
-.overlay-content { width: 95%; height: 95%; background: transparent; position: relative; color: #fff; display: flex; }
+.overlay-content { 
+  width: 95%; height: 95%; 
+  background: transparent; 
+  position: relative; 
+  color: #fff; 
+  display: flex;
+  /* OVERLAY CONTENT OPTIMIZATION */
+  will-change: transform;
+  transform: translateZ(0);
+  contain: layout style paint;
+}
 .close-btn { position:absolute; top:20px; right:30px; font-size:2rem; cursor:pointer; color:white; }
 /* small utility styles for category video layers */
 .cat-video-fo { transition: 0.2s ease;opacity: 0.5; z-index: -999;}
@@ -206,7 +247,19 @@ foreignObject {
   contain: layout style paint;
 }
 
-.blob-image { width: 100%; height: 100%; object-fit: cover; display: block; transition: all 0.2s cubic-bezier(0.1, 0, 0.1, 0.2);}
+.blob-image { 
+  width: 100%; 
+  height: 100%; 
+  object-fit: cover; 
+  display: block; 
+  /* GPU OPTIMIZATION: убираем transition: all и добавляем GPU acceleration */
+  will-change: transform, opacity;
+  backface-visibility: hidden;
+  transform: translateZ(0);
+  transition: 
+    opacity 0.2s cubic-bezier(0.1, 0, 0.1, 0.2),
+    transform 0.2s cubic-bezier(0.1, 0, 0.1, 0.2);
+}
 a:hover {box-shadow: 0 0 5px 1px white;}
 #contactsFooter {
   display: grid;
@@ -633,37 +686,60 @@ svg g.blob:not(.hovered) {
   svg g.blob { opacity: 1 !important; }
 }
 
+/* SVG PATH OPTIMIZATION: убираем избыточные transitions */
 path {
-  transition: all 0.2s cubic-bezier(0.1, 0, 0.1, 0.2);
+  /* УДАЛЕНО: transition: all 0.2s - paths обновляются через morphPath() */
   vector-effect: non-scaling-stroke;
   transform-origin: center;
   transform-box: fill-box;
+  /* GPU acceleration для SVG paths */
+  will-change: auto; /* Не используем will-change для paths - они управляются JS */
 }
 
 clipPath path {
-  transition: all 0.2s cubic-bezier(0.1, 0, 0.1, 0.2);
+  /* УДАЛЕНО: transition: all 0.2s - clipPaths обновляются программно */
   transform-origin: center;
   transform-box: fill-box;
+  /* Containment для изоляции производительности */
+  contain: layout style;
 }
 
 /* SVG element optimizations */
 svg {
   shape-rendering: optimizeSpeed;
   text-rendering: optimizeLegibility;
-  transition: all 0.2s cubic-bezier(0.1, 0, 0.1, 0.2);
+  /* SVG ROOT OPTIMIZATION: убираем transition: all для корневого SVG */
+  /* УДАЛЕНО: transition: all 0.2s - SVG корень не должен анимироваться */
+  /* GPU acceleration для всего SVG */
+  will-change: auto; /* Не форсируем will-change для корня */
+  contain: layout style paint;
 }
 
+/* SVG GROUP OPTIMIZATION: специфичные transitions для лучшей производительности */
 svg g {
   transform: translateZ(0);
   backface-visibility: hidden;
   will-change: transform, opacity;
-  transition: all 0.2s cubic-bezier(0.1, 0, 0.1, 0.2);
+  /* Убираем transition: all - используем только нужные свойства */
+  transition: 
+    transform 0.18s cubic-bezier(0.4, 0, 0.2, 1),
+    opacity 0.2s ease;
+  /* CSS containment для изоляции */
+  contain: layout style paint;
 }
 
 /* Foreign object transitions */
 foreignObject {
-  transition: all 0.2s cubic-bezier(0.1, 0, 0.1, 0.2);
+  /* FOREIGNOBJECT OPTIMIZATION: убираем transition: all */
+  transition: 
+    transform 0.2s cubic-bezier(0.1, 0, 0.1, 0.2),
+    opacity 0.2s ease;
   will-change: transform;
+  /* Максимальная изоляция для foreignObject */
+  contain: strict;
+  /* GPU acceleration */
+  transform: translateZ(0);
+  backface-visibility: hidden;
 }
 
 /* Responsive Design */
@@ -795,5 +871,110 @@ foreignObject {
   .cta-link {
     margin-left: auto;
     margin-right: auto;
+  }
+}
+
+/* ===============================================
+   ЭТАП 2: CSS PERFORMANCE OPTIMIZATIONS
+   =============================================== */
+
+/* Critical performance optimizations */
+* {
+  /* Оптимизация box-sizing для всех элементов */
+  box-sizing: border-box;
+}
+
+/* GPU acceleration для критических элементов */
+#svgRoot,
+.blob,
+.blob-outline {
+  will-change: transform;
+  transform: translateZ(0);
+  backface-visibility: hidden;
+  perspective: 1000px;
+}
+
+/* Optimized scrolling performance */
+* {
+  scroll-behavior: smooth;
+}
+
+/* Prevent layout thrashing during animations */
+.animating,
+.morphing,
+.transitioning {
+  will-change: transform, opacity;
+  contain: layout style paint;
+}
+
+/* Remove will-change after animations complete */
+.animation-complete {
+  will-change: auto;
+}
+
+/* ===============================================
+   ЭТАП 3: TOUCH & MOBILE OPTIMIZATIONS
+   =============================================== */
+
+/* Touch-specific optimizations */
+@media (pointer: coarse) {
+  /* На touch устройствах убираем hover эффекты для экономии ресурсов */
+  *:hover {
+    transition-duration: 0.1s !important;
+  }
+  
+  /* Упрощаем фильтры на touch устройствах */
+  .blob {
+    filter: none !important;
+  }
+  
+  /* Оптимизированные touch zones */
+  .blob, .overlay-content {
+    touch-action: manipulation;
+  }
+}
+
+/* Mobile-specific optimizations */
+@media (max-width: 768px) {
+  /* Упрощаем анимации на мобильных */
+  * {
+    transition-duration: 0.15s !important;
+    animation-duration: 0.15s !important;
+  }
+  
+  /* Отключаем дорогие эффекты на мобильных */
+  .overlay {
+    backdrop-filter: none !important;
+  }
+  
+  /* Ограничиваем количество одновременных анимаций */
+  .blob:nth-child(n+7) {
+    animation-play-state: paused !important;
+  }
+  
+  /* Оптимизация прокрутки на мобильных */
+  body {
+    -webkit-overflow-scrolling: touch;
+    overscroll-behavior: contain;
+  }
+}
+
+/* High refresh rate optimization */
+@media (min-resolution: 120dpi) {
+  * {
+    transition-duration: 0.08s !important;
+  }
+}
+
+/* Reduced motion for accessibility */
+@media (prefers-reduced-motion: reduce) {
+  * {
+    transition-duration: 0.1s !important;
+    animation-duration: 0.1s !important;
+    animation-iteration-count: 1 !important;
+  }
+  
+  video {
+    animation-play-state: paused !important;
   }
 }
