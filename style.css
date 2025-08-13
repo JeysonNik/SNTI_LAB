@@ -52,6 +52,12 @@ body.blurred #container {
   filter: blur(8px);
 }
 
+/* Блюрим только хэдер и основной блок при открытии overlay */
+body.blurred #filterBar,
+body.blurred #filterDivider {
+  filter: blur(8px);
+}
+
 /* SIMPLIFIED MORPHING: Простая CSS поддержка как в рабочем файле */
 .blob-group {
   /* Плавные переходы для движения групп */
@@ -220,7 +226,7 @@ body.dragging .blob-group img {
 #filterBar .btn-desc.open { opacity: 1; }
 
 #filterDivider { width: 95%; height: 1px; background: #555; margin: 5px auto; }
-#container { position: relative; width: 95%; height: calc(100% - 60px); margin: 0 auto; z-index: 1; overflow: hidden; }
+#container { position: relative; width: 95%; height: calc(100% - 75px); margin: 0 auto; z-index: 1; overflow: hidden; }
 svg { width:100%; height:100%; display:block; }
 .label {
   pointer-events: none;
@@ -1001,6 +1007,12 @@ foreignObject {
   /* Оставляем блюр контейнера активным для мобильных */
   body.blurred #container {
     filter: blur(4px) !important; /* Уменьшенный блюр на мобильных для производительности */
+  }
+  
+  /* Блюрим только хэдер на мобильных (футер остается четким) */
+  body.blurred #filterBar,
+  body.blurred #filterDivider {
+    filter: blur(4px) !important;
   }
   
   /* Ограничиваем количество одновременных анимаций */

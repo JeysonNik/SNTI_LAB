@@ -364,6 +364,34 @@
   function expandPolygon(points, px){ const c=centroid(points); const avg=maxDistToCenter(points,c)||1; const factor=1 + (px / avg); return points.map(p => [ c[0] + (p[0]-c[0]) * factor, c[1] + (p[1]-c[1]) * factor ]); }
   function resamplePolygon(points,N){ const segs=[]; let total=0; for(let i=0;i<points.length;i++){ const a=points[i]; const b=points[(i+1)%points.length]; const l=Math.hypot(b[0]-a[0], b[1]-a[1]); segs.push({a,b,l}); total+=l; } if(total===0) return []; const step = total/N; const out=[]; let acc=0, si=0; for(let i=0;i<N;i++){ const target=i*step; while(target > acc + segs[si].l && si < segs.length-1){ acc += segs[si].l; si++; } const s=segs[si]; const t=(target-acc)/s.l; out.push([ s.a[0] + (s.b[0]-s.a[0]) * t, s.a[1] + (s.b[1]-s.a[1]) * t ]); } return out; }
   function polygonToPath(pts){ if(!pts||!pts.length) return ''; let s=`M ${pts[0][0].toFixed(2)} ${pts[0][1].toFixed(2)}`; for(let i=1;i<pts.length;i++) s+= ` L ${pts[i][0].toFixed(2)} ${pts[i][1].toFixed(2)}`; s+=' Z'; return s; }
+  // --- Morphing helpers to keep continuity between frames ---
+  function polygonArea(pts){ let a=0; for(let i=0;i<pts.length;i++){ const p=pts[i], q=pts[(i+1)%pts.length]; a += (p[0]*q[1] - q[0]*p[1]); } return a/2; }
+  function ensureOrientation(pts, sign){
+    if(!pts || pts.length<3) return pts;
+    const a = polygonArea(pts);
+    if (sign === 0) return pts; // no preference
+    // sign > 0 => want CCW, sign < 0 => want CW
+    const isCCW = a > 0;
+    if ((sign > 0 && !isCCW) || (sign < 0 && isCCW)){
+      return [...pts].reverse();
+    }
+    return pts;
+  }
+  function rotateToMatch(prev, curr){
+    if(!prev || !curr || prev.length!==curr.length) return curr;
+    const target = prev[0];
+    let bestIdx = 0, best = Infinity;
+    for(let i=0;i<curr.length;i++){
+      const dx = curr[i][0]-target[0], dy = curr[i][1]-target[1];
+      const d2 = dx*dx+dy*dy;
+      if(d2<best){ best=d2; bestIdx=i; }
+    }
+    if(bestIdx===0) return curr;
+    const n = curr.length;
+    const out = new Array(n);
+    for(let i=0;i<n;i++) out[i] = curr[(bestIdx+i)%n];
+    return out;
+  }
   function squarePolygon(cx,cy,side){ const h = side/2; return [[cx-h,cy-h],[cx+h,cy-h],[cx+h,cy+h],[cx-h,cy+h]]; }
 
   // --- NEW: helpers to stabilize polygon orientation and starting point ---
@@ -440,13 +468,11 @@
       if(expandPx > 0) smooth = expandPolygon(smooth, expandPx);
       const res = resamplePolygon(smooth, RESAMPLE_POINTS);
       const finalSmooth = smoothPolygon(res, 1);
-      const finalRes = resamplePolygon(finalSmooth, RESAMPLE_FINAL);
-
-      // НОРМАЛИЗАЦИЯ перед созданием path: устраняем флип
-      const prevPts = blobs[origIndex].lastPath || null;
-      const stable = normalizeRing(finalRes, prevPts);
-
-      out.push({ path: polygonToPath(stable), pts: stable, origIndex });
+  let finalRes = resamplePolygon(finalSmooth, RESAMPLE_FINAL);
+  // НОРМАЛИЗАЦИЯ перед созданием path: устраняем флип и выравниваем старт
+  const prevPts = blobs[origIndex].lastPath || null;
+  const stable = normalizeRing(finalRes, prevPts);
+  out.push({ path: polygonToPath(stable), pts: stable, origIndex });
     }
     const mapped = blobs.map(b=>({path:'', pts:[]}));
     for(const item of out){ mapped[item.origIndex] = { path: item.path, pts: item.pts }; }
