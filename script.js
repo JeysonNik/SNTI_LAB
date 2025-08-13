@@ -128,13 +128,13 @@
   const INSET_GAP = 8;
 
   // CHAIKIN_ITERS: количество итераций сглаживания (Чайкин). Больше итераций -> более плавный, но более дорогой по CPU контур.
-  const CHAIKIN_ITERS = 10; // увеличьте, например, с 8 до 10
+  const CHAIKIN_ITERS = 5; // уменьшаем с 10 до 5 как в рабочем примере
 
   // RESAMPLE_POINTS / RESAMPLE_FINAL: размеры выборки точек для промежуточной ресемплизации.
   // RESAMPLE_POINTS влияет на качество промежуточного сглаживания, RESAMPLE_FINAL — на детализацию итогового path.
-  // Уменьшение этих чисел ускорит работу, но сделает контур менее плавным.
-  const RESAMPLE_POINTS = 192; // увеличьте, например, с 128 до 192
-  const RESAMPLE_FINAL = 320;  // увеличьте, например, с 256 до 320
+  // Уменьшаем значения для соответствия рабочему примеру и улучшения морфинга
+  const RESAMPLE_POINTS = 64; // уменьшаем с 192 до 64 как в рабочем примере
+  const RESAMPLE_FINAL = 128;  // уменьшаем с 320 до 128 для стабильности
 
   // VIDEO_PADDING: дополнительный отступ вокруг вычисленной области для видео внутри блопа.
   // Влияет на масштаб и кроп видео внутри клетки.
@@ -160,8 +160,13 @@
   let DISPLAY_LERP = 0.1;     // smoothing of displayed centers
 
   // MORPH_DURATION: стандартная длительность морфинга path'ов (ms). При фильтрации временно увеличивается.
-  // Увеличение сделает переходы более медленными/кинетичными; уменьшение — более snappy.
-  let MORPH_DURATION = 900;    // увеличьте, например, с 900 до 1400
+  // Уменьшаем до значений из рабочего примера для более быстрого морфинга
+  let MORPH_DURATION = 300;    // уменьшаем с 900 до 300 как в рабочем примере
+  
+  // SMOOTH MORPHING: настройки для плавного морфинга во время движения
+  const MOVEMENT_MORPH_DURATION = 150;  // Быстрый морфинг для движения
+  const DRAG_MORPH_DURATION = 100;      // Еще быстрее для перетаскивания
+  const VIDEO_MORPH_DURATION = 200;     // Синхронизация видео с контурами
 
   // pending timeouts used to prevent racing transitions
   let _pendingTimeouts = [];
@@ -632,23 +637,12 @@
     const old = el.getAttribute('d') || newD; 
     if(old === newD) return; 
     
-    // Используем кэш для интерполяций
-    const cacheKey = `${old}_${newD}`;
-    let interp = pathInterpolationCache.get(cacheKey);
-    
-    if (!interp) {
-      try{ 
-        interp = flubber.interpolate(old, newD, {maxSegmentLength:2}); 
-        // Ограничиваем размер кэша до 50 элементов
-        if (pathInterpolationCache.size > 50) {
-          const firstKey = pathInterpolationCache.keys().next().value;
-          pathInterpolationCache.delete(firstKey);
-        }
-        pathInterpolationCache.set(cacheKey, interp);
-      } catch(e){ 
-        el.setAttribute('d', newD); 
-        return; 
-      }
+    let interp;
+    try{ 
+      interp = flubber.interpolate(old, newD, {maxSegmentLength:2}); 
+    } catch(e){ 
+      el.setAttribute('d', newD); 
+      return; 
     }
     
     const start = performance.now(); 
@@ -658,6 +652,43 @@
       if(p<1) requestAnimationFrame(frame); 
     } 
     requestAnimationFrame(frame); 
+  }
+
+  // SMOOTH MORPHING: Упрощенная функция морфинга как в рабочем примере
+  function smartMorphPath(el, newD, blob, isForced = false) {
+    // Проверяем, нужно ли изменение
+    const currentD = el.getAttribute('d') || '';
+    if (currentD === newD) return;
+    
+    // Используем простой морфинг с адаптивной длительностью
+    let duration = MORPH_DURATION;
+    
+    if (dragging && dragging.b === blob) {
+      // При перетаскивании - быстрее
+      duration = 100;
+    } else if (blob.vx * blob.vx + blob.vy * blob.vy > 0.01) {
+      // При движении - быстрее
+      duration = 150;
+    } else if (isForced) {
+      // Для принудительных обновлений - мгновенно
+      el.setAttribute('d', newD);
+      return;
+    }
+    
+    // Используем стандартный морфинг
+    morphPath(el, newD, duration);
+  }
+
+  // SMOOTH MORPHING: Упрощенный морфинг для видео
+  function smoothMorphVideo(blob, newTransform) {
+    const video = blob.localVideo;
+    if (!video) return;
+    
+    // Проверяем, действительно ли нужно изменение
+    if (video.style.transform === newTransform) return;
+    
+    // Простое мгновенное применение для стабильности
+    video.style.transform = newTransform;
   }
 
   function circlePathStr(cx,cy,r,segments=32){ const pts = []; for(let i=0;i<segments;i++){ const a = (i/segments)*Math.PI*2; pts.push([cx + Math.cos(a)*r, cy + Math.sin(a)*r]); } return polygonToPath(pts); }
@@ -672,7 +703,11 @@
     
     const renderStartTime = performance.now();
     const now = performance.now();
-    if(!forceImmediate && now - lastCompute < window.RECOMPUTE_INTERVAL) return; lastCompute = now;
+    
+    // SMART THROTTLING: менее агрессивный throttling для морфинга каждый кадр
+    const effectiveInterval = forceImmediate ? 0 : Math.max(16, window.RECOMPUTE_INTERVAL);
+    if(!forceImmediate && now - lastCompute < effectiveInterval) return; 
+    lastCompute = now;
     const infos = computeVoronoiPaths(true);
     _lastVoronoiInfos = infos;
     
@@ -724,6 +759,7 @@
         if(forceImmediate){
           try{ b.clipPathEl.setAttribute('d', info.path); b.pathEl.setAttribute('d', info.path); }catch(e){}
         } else {
+          // Используем простой морфинг как в рабочем примере
           morphPath(b.clipPathEl, info.path, MORPH_DURATION);
           morphPath(b.pathEl, info.path, MORPH_DURATION);
         }
@@ -805,6 +841,27 @@
       const vid = b.localVideo; 
       if(!vid) continue; 
       
+      // DRAGGING STABILITY: При перетаскивании фиксируем видео трансформацию
+      if(dragging && dragging.b === b) {
+        // Если блоп перетаскивается - используем зафиксированную трансформацию
+        if(!b._dragVideoTransform && b.frozenVideoTransform) {
+          // Используем frozenVideoTransform как основу для зафиксированной трансформации
+          b._dragVideoTransform = b.frozenVideoTransform;
+        }
+        if(b._dragVideoTransform && vid.style.transform !== b._dragVideoTransform) {
+          vid.style.transform = b._dragVideoTransform;
+        }
+        if(b._dragVideoTransform) {
+          _lastVideoTransforms[i] = b._dragVideoTransform;
+        }
+        continue;
+      } else {
+        // Очищаем зафиксированную трансформацию если перетаскивание закончилось
+        if(b._dragVideoTransform) {
+          delete b._dragVideoTransform;
+        }
+      }
+      
       let cx = b.dispX, cy = b.dispY, maxD = Math.max(32, b.r); 
       
       if(info && info.pts && info.pts.length){ 
@@ -850,6 +907,14 @@
       // Если есть frozen transform, не интерполируем
       if(b.frozenVideoTransform !== undefined && b.frozenVideoTransform !== null) continue;
       
+      // DRAGGING STABILITY: При перетаскивании используем зафиксированную трансформацию
+      if(dragging && dragging.b === b && b._dragVideoTransform) {
+        if(vid.style.transform !== b._dragVideoTransform) {
+          vid.style.transform = b._dragVideoTransform;
+        }
+        continue;
+      }
+      
       // Используем текущие dispX/dispY для плавного следования за блопом
       let cx = b.dispX, cy = b.dispY, maxD = Math.max(32, b.r);
       
@@ -861,8 +926,9 @@
       const ty = Math.round(H/2 - cy); 
       const smoothTransform = `translate(${tx}px, ${ty}px) scale(${scale})`; 
       
-      // Применяем только если трансформация изменилась
-      if(vid.style.transform !== smoothTransform) {
+      // Простое применение без transitions
+      const currentTransform = vid.style.transform || '';
+      if(currentTransform !== smoothTransform) {
         vid.style.transform = smoothTransform;
       }
     }
@@ -876,25 +942,20 @@
     const lv = b.localVideo;
     
     if (mode === 'overview' && lv && lv.style.display !== 'none') {
-      // Используем реальные координаты без интерполяции для мгновенного отклика
-      const cx = b.x; // НЕ b.dispX - используем реальную позицию
-      const cy = b.y; // НЕ b.dispY - используем реальную позицию
-      const maxD = Math.max(32, b.r);
-      const pad = VIDEO_PADDING;
-      const side = Math.ceil(maxD * 2 + pad * 2);
-      const desired = Math.max(32, side);
-      const scale = Math.min(2, Math.max(0.6, W / (desired * 1.15)));
-      const tx = Math.round(W / 2 - cx);
-      const ty = Math.round(H / 2 - cy);
-      
-      const dragTransform = `translate(${tx}px, ${ty}px) scale(${scale})`;
-      
-      // Применяем transform без проверки на изменение для максимальной отзывчивости
-      lv.style.transform = dragTransform;
-      
-      // Кэшируем для последующего использования
-      if (!_lastVideoTransforms[blobs.indexOf(b)]) _lastVideoTransforms[blobs.indexOf(b)] = '';
-      _lastVideoTransforms[blobs.indexOf(b)] = dragTransform;
+      // ВАЖНО: Используем замороженную трансформацию для стабильности видео
+      if (b.frozenVideoTransform) {
+        // Применяем зафиксированную в начале перетаскивания трансформацию
+        if (lv.style.transform !== b.frozenVideoTransform) {
+          lv.style.transform = b.frozenVideoTransform;
+        }
+        
+        // Кэшируем для последующего использования
+        const blobIndex = blobs.indexOf(b);
+        if (blobIndex >= 0) {
+          if (!_lastVideoTransforms[blobIndex]) _lastVideoTransforms[blobIndex] = '';
+          _lastVideoTransforms[blobIndex] = b.frozenVideoTransform;
+        }
+      }
     }
   }
 
@@ -1047,8 +1108,8 @@
           const infosNow = _lastVoronoiInfos || computeVoronoiPaths(true);
           const info = infosNow[hovered.id];
           if(info && info.path) {
-            morphPath(hovered.clipPathEl, info.path, HOVER_MORPH_DURATION);
-            morphPath(hovered.pathEl, info.path, HOVER_MORPH_DURATION);
+            morphPath(hovered.clipPathEl, info.path, 300);
+            morphPath(hovered.pathEl, info.path, 300);
           }
         } catch(err){}
         hovered.frozenVideoTransform = null; 
@@ -1076,8 +1137,8 @@
         const infosNow = _lastVoronoiInfos || computeVoronoiPaths(true); 
         const infoForHover = infosNow[hovered.id]; 
         if(infoForHover){ 
-          morphPath(hovered.clipPathEl, infoForHover.path, HOVER_MORPH_DURATION);
-          morphPath(hovered.pathEl, infoForHover.path, HOVER_MORPH_DURATION);
+          morphPath(hovered.clipPathEl, infoForHover.path, 300);
+          morphPath(hovered.pathEl, infoForHover.path, 300);
           hovered.frozenPath = infoForHover.path;
           
           const c = centroid(infoForHover.pts); 
@@ -1270,6 +1331,9 @@
       try{ if(b._excludeFromCategoryClip){ delete b._excludeFromCategoryClip; recomputeAndRender(true); } }catch(e){}
       // hide and pause the local video used for dragging
       try{ const lv = b.localVideo; if(lv){ lv.style.display = 'none'; try{ lv.pause(); }catch(e){} lv.style.transform = ''; } }catch(e){}
+      // DRAG FIX: очищаем все состояния перетаскивания
+      if(b.frozenVideoTransform) delete b.frozenVideoTransform;
+      if(b._dragVideoTransform) delete b._dragVideoTransform;
       b.frozenFO = null; b.frozenLabel = null; b.isFrozen = false; recomputeAndRender(false); 
     } 
     dragging = null; 
@@ -1286,13 +1350,18 @@
       physicsStep(); 
       updateDisplayPositions(); 
       
-      // Обновляем маски и видео синхронно
-      if(frameCount % 4 === 0) {
-        recomputeAndRender(false);
+      // SMOOTH ANIMATION: recompute каждый кадр для плавности, но video только каждые 4 кадра
+      recomputeAndRender(false);
+      
+      // ANTI-JITTER: Оптимизированное обновление видео для устранения подергиваний
+      if(frameCount % 6 === 0) {
+        // Менее частое полное обновление для стабильности
         updateVideoTransforms(); // Полное обновление с Voronoi данными
-      } else {
+      } else if(frameCount % 2 === 0) {
+        // Интерполированное обновление каждый второй кадр
         updateVideoTransformsSmooth(); // Интерполированное обновление между recompute
       }
+      // В остальных кадрах видео не обновляется для предотвращения микроподергиваний
     } 
     
     frameCount++; 

@@ -49,8 +49,31 @@ body, html {
 
 /* Блюр заднего фона при открытии overlay на всех устройствах включая мобильные */
 body.blurred #container { 
-  filter: blur(8px); 
-  transition: filter 300ms ease;
+  filter: blur(8px);
+}
+
+/* SMOOTH MORPHING: CSS поддержка для плавных переходов SVG */
+.blob-group path {
+  /* Готовность к CSS transitions для быстрых морфингов */
+  will-change: auto; /* Изменено с 'd' для предотвращения подергиваний */
+}
+
+.blob-group video, .blob-group img {
+  /* ANTI-JITTER: Осторожные переходы для медиа контента */
+  transition-property: opacity; /* Убираем transform из transitions */
+  transition-timing-function: ease-out;
+  will-change: auto; /* Изменено для предотвращения конфликтов */
+}
+
+/* Оптимизация для GPU при перетаскивании */
+body.dragging .blob-group path,
+body.dragging .blob-group video,
+body.dragging .blob-group img {
+  will-change: transform;
+  transform: translateZ(0);
+  backface-visibility: hidden;
+  /* ANTI-JITTER: Отключаем transitions при перетаскивании */
+  transition: none !important;
 }
 
 /* CONTAINER OPTIMIZATION: GPU acceleration для основного контейнера */
@@ -837,7 +860,7 @@ foreignObject {
 
   /* Fix container height for mobile - account for two-row filterBar */
   #container {
-    height: calc(100% - 90px); /* Increased from 60px to 90px for mobile */
+    height: calc(100% - 120px); /* Increased from 60px to 120px for mobile */
   }
 
   #contactsFooter {
