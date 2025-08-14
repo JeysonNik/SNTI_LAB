@@ -7,20 +7,17 @@ function picsum(seed, w=1200, h=800){ return `https://picsum.photos/seed/${encod
 window.OVERLAY_CONTENT = {
   // ALPHA PROJECTS (Analysis - Layout Type 1)
   alpha1: {
-    layoutType: 1,
+    layoutType: 2,
     title: 'Real-Time Market Analytics',
     images: [
-      "https://images.unsplash.com/photo-1754875177745-b09fcb123125?q=80&w=1170&auto=format&fit=crop&ixlib=rb-4.1.0&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D",
-      "https://images.unsplash.com/photo-1539353721923-2801d3cab58a?q=80&w=1332&auto=format&fit=crop&ixlib=rb-4.1.0&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D", 
-      "https://images.unsplash.com/photo-1712313498043-a812f0ed0782?q=80&w=1170&auto=format&fit=crop&ixlib=rb-4.1.0&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D"
+      "/content/sol_1/3.png",
+      "/content/sol_1/2.png", 
+      "/content/sol_1/4.png"
     ],
     paragraphs: [
       'Advanced real-time market analytics platform providing comprehensive insights into trading patterns and market dynamics.',
       'Machine learning algorithms analyze millions of data points to identify emerging trends and investment opportunities.',
-      'Interactive dashboards enable traders and analysts to make data-driven decisions with confidence.',
-      'The platform integrates multiple data sources including stock exchanges, news feeds, social media sentiment, and economic indicators to provide a holistic view of market conditions.',
-      'Advanced risk management tools help portfolio managers optimize their strategies while maintaining appropriate risk levels.',
-      'Real-time alerts and notifications ensure that critical market movements are never missed, enabling rapid response to changing conditions.'
+      'Interactive dashboards enable traders and analysts to make data-driven decisions with confidence.'
     ],
     list: [
       { img: "https://images.unsplash.com/photo-1556337410-473d87776943?q=80&w=1170&auto=format&fit=crop&ixlib=rb-4.1.0&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D", text: 'Real-time data processing with sub-second latency' },

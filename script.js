@@ -19,7 +19,7 @@
   // --- data ---
   const ORIGINAL = [];
   const categories = [
-    { id: 'alpha', title: 'Project Alpha', src: 'https://videos.pexels.com/video-files/4508065/4508065-uhd_2560_1440_25fps.mp4' },
+    { id: 'alpha', title: 'Project Alpha', src: '/content/sol_1/1.mp4' },
     { id: 'beta',  title: 'Project Beta',  src: 'https://videos.pexels.com/video-files/16029681/16029681-uhd_2560_1440_30fps.mp4' },
     { id: 'gamma', title: 'Project Gamma', src: 'https://videos.pexels.com/video-files/8333185/8333185-hd_1080_1080_30fps.mp4' }
   ];
