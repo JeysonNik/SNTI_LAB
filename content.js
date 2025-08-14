@@ -10,9 +10,9 @@ window.OVERLAY_CONTENT = {
     layoutType: 2,
     title: 'Real-Time Market Analytics',
     images: [
-      "/content/sol_1/3.png",
-      "/content/sol_1/2.png", 
-      "/content/sol_1/4.png"
+      "/SNTI_LAB/content/sol_1/3.png",
+      "/SNTI_LAB/content/sol_1/2.png", 
+      "/SNTI_LAB/content/sol_1/4.png"
     ],
     paragraphs: [
       'Advanced real-time market analytics platform providing comprehensive insights into trading patterns and market dynamics.',
