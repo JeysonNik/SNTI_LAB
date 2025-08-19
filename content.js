@@ -35,9 +35,9 @@ window.OVERLAY_CONTENT = {
     layoutType: 1,
     title: 'Customer Behavior Analytics',
     images: [
-      picsum('alpha2-behavior'),
-      picsum('alpha2-heatmaps'),
-      picsum('alpha2-segments')
+      "/SNTI_LAB/content/sol_2/1.png",
+      "/SNTI_LAB/content/sol_2/2.png", 
+      "/SNTI_LAB/content/sol_2/3.png"
     ],
     paragraphs: [
       'Deep customer behavior analysis platform tracking user journeys across multiple touchpoints.',
