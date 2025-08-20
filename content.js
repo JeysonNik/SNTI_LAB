@@ -57,17 +57,17 @@ window.OVERLAY_CONTENT = {
   },
 
   alpha3: {
-    layoutType: 1, 
-    title: 'Social Media Sentiment Engine',
+    layoutType: 2, 
+    title: 'Mobility & Accessibility Heatmap',
     images: [
-      picsum('alpha3-sentiment'),
-      picsum('alpha3-social'),
-      picsum('alpha3-trends')
+      "/SNTI_LAB/content/sol_3/1.png",
+      "/SNTI_LAB/content/sol_3/2.png", 
+      "/SNTI_LAB/content/sol_3/3.png"
     ],
     paragraphs: [
-      'Large-scale social media sentiment analysis engine processing millions of posts daily.',
-      'Natural language processing identifies brand mentions, sentiment trends, and influence patterns.',
-      'Real-time alerts enable rapid response to PR crises and viral opportunities.'
+      'Parametric urban analysis tool delivering precise isochrone maps for any location.',
+      'Automated geospatial algorithms quickly define accessibility zones by walking, cycling, or driving within set timeframes.',
+      'Optimized workflows reduce manual effort, improve accuracy, and support faster, data-driven planning decisions.'
     ],
     list: [
       { img: picsum('alpha3-nlp'), text: 'Multi-language NLP with 92% sentiment accuracy' },
@@ -75,10 +75,10 @@ window.OVERLAY_CONTENT = {
       { img: picsum('alpha3-influence'), text: 'Influencer identification and impact measurement' }
     ],
     blocks: [
-      { img: picsum('alpha3-tech'), text: 'Technologies: Python, spaCy, Docker, Kubernetes, InfluxDB' },
+      { img: "/SNTI_LAB/content/sol_3/4.png", text: 'Technologies: Grasshopper, Rhino, Python, GIS APIs' },
       { img: picsum('alpha3-scale'), text: 'Scale: 10M+ posts/day, 50+ languages, 99.9% uptime', reverse: true }
     ],
-    figure: { img: picsum('alpha3-network'), caption: 'Social Network Analysis - Influence Mapping' }
+    figure: { img: "/SNTI_LAB/content/sol_3/5.png", caption: 'Isochrone Mapping – Accessibility by Time' }
   },
 
   alpha4: {
