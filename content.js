@@ -8,7 +8,7 @@ window.OVERLAY_CONTENT = {
   // ALPHA PROJECTS (Analysis - Layout Type 1)
   alpha1: {
     layoutType: 2,
-    title: 'Solar analysis of building facades',
+    title: 'Solar & Daylight Audit',
     images: [
       "/SNTI_LAB/content/sol_1/3.png",
       "/SNTI_LAB/content/sol_1/2.png", 
