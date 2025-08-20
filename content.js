@@ -8,16 +8,16 @@ window.OVERLAY_CONTENT = {
   // ALPHA PROJECTS (Analysis - Layout Type 1)
   alpha1: {
     layoutType: 2,
-    title: 'Real-Time Market Analytics',
+    title: 'Solar analysis of building facades',
     images: [
       "/SNTI_LAB/content/sol_1/3.png",
       "/SNTI_LAB/content/sol_1/2.png", 
       "/SNTI_LAB/content/sol_1/4.png"
     ],
     paragraphs: [
-      'Advanced real-time market analytics platform providing comprehensive insights into trading patterns and market dynamics.',
-      'Machine learning algorithms analyze millions of data points to identify emerging trends and investment opportunities.',
-      'Interactive dashboards enable traders and analysts to make data-driven decisions with confidence.'
+      'We perform clear, client-friendly sunlight and façade analysis using Grasshopper and Ladybug to show how daylight, shadows and heat affect your building and site.',
+'This cuts analysis from days to hours, improves accuracy with data-driven simulation, and uses generative algorithms to rapidly test multiple massing and façade options.',
+'Inputs: 3D model and site/location. Outputs: clear visualizations, flagged problem areas (excess shadow or overheating), and optimal massing/facade options for easy comparison.'
     ],
     list: [
       { img: "https://images.unsplash.com/photo-1556337410-473d87776943?q=80&w=1170&auto=format&fit=crop&ixlib=rb-4.1.0&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D", text: 'Real-time data processing with sub-second latency' },
@@ -25,24 +25,24 @@ window.OVERLAY_CONTENT = {
       { img: "https://plus.unsplash.com/premium_photo-1701158347546-4bd6c1a25154?q=80&w=1170&auto=format&fit=crop&ixlib=rb-4.1.0&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D", text: 'Customizable dashboards with 50+ visualization types' }
     ],
     blocks: [
-      { img: "https://images.unsplash.com/photo-1737348793783-414ba6bfef81?q=80&w=1170&auto=format&fit=crop&ixlib=rb-4.1.0&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D", text: 'Technology: Python, TensorFlow, React, Redis, PostgreSQL' },
+      { img: "https://images.unsplash.com/photo-1737348793783-414ba6bfef81?q=80&w=1170&auto=format&fit=crop&ixlib=rb-4.1.0&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D", text: 'Technology: Rhino, Grasshopper, Ladybug, Python, parametric/generative algorithms' },
       { img: "https://images.unsplash.com/photo-1582205050683-d2c42d324475?q=80&w=687&auto=format&fit=crop&ixlib=rb-4.1.0&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D", text: 'Impact: 65% faster decision-making, $2M+ in trading profits', reverse: true }
     ],
-    figure: { img: "https://plus.unsplash.com/premium_photo-1732835088231-6674e3167640?q=80&w=1288&auto=format&fit=crop&ixlib=rb-4.1.0&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D", caption: 'System Architecture - Microservices & Real-time Processing' }
+    figure: { img: "https://plus.unsplash.com/premium_photo-1732835088231-6674e3167640?q=80&w=1288&auto=format&fit=crop&ixlib=rb-4.1.0&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D", caption: 'Sun analysis & generative massing — example results and workflow' }
   },
 
   alpha2: {
-    layoutType: 1,
-    title: 'Customer Behavior Analytics',
+    layoutType: 2,
+    title: 'Urban Element Design & CNC Fabrication',
     images: [
       "/SNTI_LAB/content/sol_2/1.png",
       "/SNTI_LAB/content/sol_2/2.png", 
       "/SNTI_LAB/content/sol_2/3.png"
     ],
     paragraphs: [
-      'Deep customer behavior analysis platform tracking user journeys across multiple touchpoints.',
-      'Advanced segmentation algorithms identify high-value customer personas and predict churn probability.',
-      'Heat mapping and session replay provide actionable insights for UX optimization.'
+      'We model 3D urban elements of any form — street furniture, planters, dividers and more — turning sketches into precise, buildable parametric designs.',
+      'Using lattice modelling and flexible wood-veneer coverings with subsequent plastering and lacquering, we realize complex bionic shapes; our generative workflows rapidly iterate options and optimize the final geometry',
+      'Inputs: your sketches, concept notes and site (if available). Outputs: optimized 3D models, fabrication drawings for CNC'
     ],
     list: [
       { img: picsum('alpha2-journey'), text: 'Complete customer journey mapping and analysis' },
@@ -50,10 +50,10 @@ window.OVERLAY_CONTENT = {
       { img: picsum('alpha2-predict'), text: 'Churn prediction with 3-month forecast accuracy' }
     ],
     blocks: [
-      { img: picsum('alpha2-stack'), text: 'Stack: Node.js, MongoDB, Vue.js, Apache Kafka, Elasticsearch' },
+      { img: picsum('alpha2-stack'), text: 'Technology: Rhino, Grasshopper, Kangaroo, Python, CNC/CAM, lattice/veneer fabrication' },
       { img: picsum('alpha2-results'), text: 'Results: 40% increase in retention, 25% boost in conversions', reverse: true }
     ],
-    figure: { img: picsum('alpha2-funnel'), caption: 'Customer Funnel Analysis - Conversion Optimization' }
+    figure: { img: picsum('alpha2-funnel'), caption: 'Parametric urban forms — rapid prototyping to CNC-ready fabrication' }
   },
 
   alpha3: {
