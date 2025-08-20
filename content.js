@@ -78,7 +78,7 @@ window.OVERLAY_CONTENT = {
       { img: "/SNTI_LAB/content/sol_3/4.png", text: 'Technologies: Grasshopper, Rhino, Python, GIS APIs' },
       { img: picsum('alpha3-scale'), text: 'Scale: 10M+ posts/day, 50+ languages, 99.9% uptime', reverse: true }
     ],
-    figure: { img: "/SNTI_LAB/content/sol_3/5.png", caption: 'Isochrone Mapping – Accessibility by Time' }
+    figure: { img: "/SNTI_LAB/content/sol_3/5.jpg", caption: 'Isochrone Mapping – Accessibility by Time' }
   },
 
   alpha4: {
