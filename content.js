@@ -75,10 +75,10 @@ window.OVERLAY_CONTENT = {
       { img: picsum('alpha3-influence'), text: 'Influencer identification and impact measurement' }
     ],
     blocks: [
-      { img: "/SNTI_LAB/content/sol_3/4.png", text: 'Technologies: Grasshopper, Rhino, Python, GIS APIs' },
+      { img: "/SNTI_LAB/content/sol_3/5.jpg", text: 'Technologies: Grasshopper, Rhino, Python, GIS APIs' },
       { img: picsum('alpha3-scale'), text: 'Scale: 10M+ posts/day, 50+ languages, 99.9% uptime', reverse: true }
     ],
-    figure: { img: "/SNTI_LAB/content/sol_3/5.jpg", caption: 'Isochrone Mapping – Accessibility by Time' }
+    figure: { img: "/SNTI_LAB/content/sol_3/4.png", caption: 'Isochrone Mapping – Accessibility by Time' }
   },
 
   alpha4: {
